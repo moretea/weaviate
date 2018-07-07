@@ -81,6 +81,17 @@
                         "TestThing2"
                     ],
                     "description": "Value of testCref."
+                },
+                {
+                    "name": "testCref2",
+                    "keywords": [{
+                        "kind": "testActionKind",
+                        "weight": 1.0
+                    }],
+                    "@dataType": [
+                        "TestThing2"
+                    ],
+                    "description": "Value of testCref2."
                 }, {
                     "name": "testRandomType",
                     "keywords": [{

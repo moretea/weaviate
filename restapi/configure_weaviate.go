@@ -46,8 +46,8 @@ import (
 	"github.com/creativesoftwarefdn/weaviate/connectors"
 	"github.com/creativesoftwarefdn/weaviate/connectors/cassandra"
 	"github.com/creativesoftwarefdn/weaviate/connectors/dataloader"
-	"github.com/creativesoftwarefdn/weaviate/connectors/foobar"
 	"github.com/creativesoftwarefdn/weaviate/connectors/kvcache"
+	"github.com/creativesoftwarefdn/weaviate/connectors/tinkerpop"
 	"github.com/creativesoftwarefdn/weaviate/connectors/utils"
 	"github.com/creativesoftwarefdn/weaviate/graphqlapi"
 	"github.com/creativesoftwarefdn/weaviate/messages"
@@ -156,7 +156,7 @@ func deleteKey(ctx context.Context, databaseConnector dbconnector.DatabaseConnec
 func GetAllConnectors() []dbconnector.DatabaseConnector {
 	// Set all existing connectors
 	connectors := []dbconnector.DatabaseConnector{
-		&foobar.Foobar{},
+		&tinkerpop.Tinkerpop{},
 		&cassandra.Cassandra{},
 	}
 
@@ -909,6 +909,9 @@ func configureAPI(api *operations.WeaviateAPI) http.Handler {
 
 		// Object is not found
 		if err != nil || responseObject.Key == nil {
+			if responseObject.Key == nil {
+				err = errors.New(401, "No keys are set")
+			}
 			messaging.ErrorMessage(err)
 			return things.NewWeaviateThingsGetNotFound()
 		}

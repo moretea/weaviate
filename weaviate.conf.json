@@ -107,5 +107,29 @@
 				}
 			]
 		}
+	}, {
+		"name": "tinkerpop",
+		"database": {
+			"name": "tinkerpop",
+			"database_config": {
+				"host": "127.0.0.1",
+				"port": 8182
+			}
+		},
+		"schemas": {
+			"Thing": "./test/schema/test-thing-schema.json",
+			"Action": "./test/schema/test-action-schema.json"
+		},
+		"limit": 100,
+		"debug": true,
+		"development": {
+			"external_instances": [{
+					"url": "http://localhost:8080"
+				},
+				{
+					"url": "http://127.0.0.1:8080"
+				}
+			]
+		}
 	}]
 }
