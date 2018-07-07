@@ -11,7 +11,7 @@
  * Contact: @CreativeSofwFdn / bob@kub.design
  */
 
-package tinkerpop
+package gremlin
 
 import (
 	"context"
@@ -29,9 +29,9 @@ import (
 	"github.com/creativesoftwarefdn/weaviate/schema"
 )
 
-// Tinkerpop has some basic variables.
+// Gremlin has some basic variables.
 // This is mandatory, only change it if you need aditional, global variables
-type Tinkerpop struct {
+type Gremlin struct {
 	client *gremgo.Client
 	kind   string
 
@@ -41,7 +41,7 @@ type Tinkerpop struct {
 	messaging     *messages.Messaging
 }
 
-// Config represents the config outline for Tinkerpop. The Database config shoud be of the following form:
+// Config represents the config outline for Gremlin. The Database config shoud be of the following form:
 // "database_config" : {
 //     "host": "127.0.0.1",
 //     "port": 9080
@@ -52,7 +52,7 @@ type Config struct {
 	Port int
 }
 
-// Edge results from Tinkerpop
+// Edge results from Gremlin
 type Edges [][]struct {
 	ID         int              `json:"id"`
 	InV        int              `json:"inV"`
@@ -64,7 +64,7 @@ type Edges [][]struct {
 	Type       string           `json:"type"`
 }
 
-func (f *Tinkerpop) trace() {
+func (f *Gremlin) trace() {
 	pc := make([]uintptr, 10) // at least 1 entry needed
 	runtime.Callers(2, pc)
 	f2 := runtime.FuncForPC(pc[0])
@@ -73,8 +73,8 @@ func (f *Tinkerpop) trace() {
 }
 
 // GetName returns a unique connector name, this name is used to define the connector in the weaviate config
-func (f *Tinkerpop) GetName() string {
-	return "tinkerpop"
+func (f *Gremlin) GetName() string {
+	return "gremlin"
 }
 
 // SetConfig sets variables, which can be placed in the config file section "database_config: {}"
@@ -85,20 +85,20 @@ func (f *Tinkerpop) GetName() string {
 // 2. They will become available via f.config.[variable-name]
 //
 // 	"database": {
-// 		"name": "tinkerpop",
+// 		"name": "gremlin",
 // 		"database_config" : {
 // 			"host": "127.0.0.1",
 // 			"port": 9080
 // 		}
 // 	},
-func (f *Tinkerpop) SetConfig(configInput *config.Environment) error {
+func (f *Gremlin) SetConfig(configInput *config.Environment) error {
 
 	// Mandatory: needed to add the JSON config represented as a map in f.config
 	err := mapstructure.Decode(configInput.Database.DatabaseConfig, &f.config)
 
 	// Example to: Validate if the essential  config is available, like host and port.
 	if err != nil || len(f.config.Host) == 0 || f.config.Port == 0 {
-		return errors_.New("could not get Tinkerpop host/port from config")
+		return errors_.New("could not get Gremlin host/port from config")
 	}
 
 	// If success return nil, otherwise return the error (see above)
@@ -108,7 +108,7 @@ func (f *Tinkerpop) SetConfig(configInput *config.Environment) error {
 // SetSchema takes actionSchema and thingsSchema as an input and makes them available globally at f.schema
 // In case you want to modify the schema, this is the place to do so.
 // Note: When this function is called, the schemas (action + things) are already validated, so you don't have to build the validation.
-func (f *Tinkerpop) SetSchema(schemaInput *schema.WeaviateSchema) error {
+func (f *Gremlin) SetSchema(schemaInput *schema.WeaviateSchema) error {
 	f.schema = schemaInput
 
 	// If success return nil, otherwise return the error
@@ -117,7 +117,7 @@ func (f *Tinkerpop) SetSchema(schemaInput *schema.WeaviateSchema) error {
 
 // SetMessaging is used to send messages to the service.
 // Available message types are: f.messaging.Infomessage ...DebugMessage ...ErrorMessage ...ExitError (also exits the service) ...InfoMessage
-func (f *Tinkerpop) SetMessaging(m *messages.Messaging) error {
+func (f *Gremlin) SetMessaging(m *messages.Messaging) error {
 
 	// mandatory, adds the message functions to f.messaging to make them globally accessible.
 	f.messaging = m
@@ -129,11 +129,11 @@ func (f *Tinkerpop) SetMessaging(m *messages.Messaging) error {
 // SetServerAddress is used to fill in a global variable with the server address, but can also be used
 // to do some custom actions.
 // Does not return anything
-func (f *Tinkerpop) SetServerAddress(addr string) {
+func (f *Gremlin) SetServerAddress(addr string) {
 	f.serverAddress = addr
 }
 
-func (f *Tinkerpop) Connect() error {
+func (f *Gremlin) Connect() error {
 
 	messaging := &messages.Messaging{}
 
@@ -159,7 +159,7 @@ func (f *Tinkerpop) Connect() error {
 }
 
 // Init 1st initializes the schema in the database and 2nd creates a root key.
-func (f *Tinkerpop) Init() error {
+func (f *Gremlin) Init() error {
 
 	/*
 	 * 1.  If a schema is needed, you need to add the schema to the DB here.
@@ -194,6 +194,6 @@ func (f *Tinkerpop) Init() error {
 }
 
 // Attach can attach something to the request-context
-func (f *Tinkerpop) Attach(ctx context.Context) (context.Context, error) {
+func (f *Gremlin) Attach(ctx context.Context) (context.Context, error) {
 	return ctx, nil
 }

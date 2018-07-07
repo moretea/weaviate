@@ -11,7 +11,7 @@
  * Contact: @CreativeSofwFdn / bob@kub.design
  */
 
-package tinkerpop
+package gremlin
 
 import (
 	"context"
@@ -24,7 +24,7 @@ import (
 // AddKey adds a key to the Foobar database with the given UUID and token.
 // UUID  = reference to the key
 // token = is the actual access token used in the API's header
-func (f *Tinkerpop) AddKey(ctx context.Context, key *models.Key, UUID strfmt.UUID, token string) error {
+func (f *Gremlin) AddKey(ctx context.Context, key *models.Key, UUID strfmt.UUID, token string) error {
 
 	// Key struct should be stored
 
@@ -33,23 +33,23 @@ func (f *Tinkerpop) AddKey(ctx context.Context, key *models.Key, UUID strfmt.UUI
 }
 
 // GetKey fills the given KeyGetResponse with the values from the database, based on the given UUID.
-func (f *Tinkerpop) GetKey(ctx context.Context, UUID strfmt.UUID, keyResponse *models.KeyGetResponse) error {
+func (f *Gremlin) GetKey(ctx context.Context, UUID strfmt.UUID, keyResponse *models.KeyGetResponse) error {
 
 	return nil
 }
 
 // GetKeys fills the given []KeyGetResponse with the values from the database, based on the given UUIDs.
-func (f *Tinkerpop) GetKeys(ctx context.Context, UUIDs []strfmt.UUID, keysResponse *[]*models.KeyGetResponse) error {
+func (f *Gremlin) GetKeys(ctx context.Context, UUIDs []strfmt.UUID, keysResponse *[]*models.KeyGetResponse) error {
 	return nil
 }
 
 // DeleteKey deletes the Key in the DB at the given UUID.
-func (f *Tinkerpop) DeleteKey(ctx context.Context, key *models.Key, UUID strfmt.UUID) error {
+func (f *Gremlin) DeleteKey(ctx context.Context, key *models.Key, UUID strfmt.UUID) error {
 	return nil
 }
 
 // GetKeyChildren fills the given KeyGetResponse array with the values from the database, based on the given UUID.
-func (f *Tinkerpop) GetKeyChildren(ctx context.Context, UUID strfmt.UUID, children *[]*models.KeyGetResponse) error {
+func (f *Gremlin) GetKeyChildren(ctx context.Context, UUID strfmt.UUID, children *[]*models.KeyGetResponse) error {
 
 	// for examle: `children = [OBJECT-A, OBJECT-B, OBJECT-C]`
 	// Where an OBJECT = models.KeyGetResponse
@@ -58,6 +58,6 @@ func (f *Tinkerpop) GetKeyChildren(ctx context.Context, UUID strfmt.UUID, childr
 }
 
 // UpdateKey updates the Key in the DB at the given UUID.
-func (f *Tinkerpop) UpdateKey(ctx context.Context, key *models.Key, UUID strfmt.UUID, token string) error {
+func (f *Gremlin) UpdateKey(ctx context.Context, key *models.Key, UUID strfmt.UUID, token string) error {
 	return nil
 }

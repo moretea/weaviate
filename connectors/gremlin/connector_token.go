@@ -11,7 +11,7 @@
  * Contact: @CreativeSofwFdn / bob@kub.design
  */
 
-package tinkerpop
+package gremlin
 
 import (
 	"context"
@@ -23,7 +23,7 @@ import (
 )
 
 // ValidateToken validates/gets a key to the Foobar database with the given token (=UUID)
-func (f *Tinkerpop) ValidateToken(ctx context.Context, UUID strfmt.UUID, keyResponse *models.KeyGetResponse) (token string, err error) {
+func (f *Gremlin) ValidateToken(ctx context.Context, UUID strfmt.UUID, keyResponse *models.KeyGetResponse) (token string, err error) {
 
 	// key (= models.KeyGetResponse) should be populated with the response that comes from the DB.
 

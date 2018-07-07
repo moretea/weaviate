@@ -108,9 +108,9 @@
 			]
 		}
 	}, {
-		"name": "tinkerpop",
+		"name": "gremlin",
 		"database": {
-			"name": "tinkerpop",
+			"name": "gremlin",
 			"database_config": {
 				"host": "127.0.0.1",
 				"port": 8182

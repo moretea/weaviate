@@ -45,8 +45,8 @@ import (
 	"github.com/creativesoftwarefdn/weaviate/config"
 	"github.com/creativesoftwarefdn/weaviate/connectors"
 	"github.com/creativesoftwarefdn/weaviate/connectors/dataloader"
+	"github.com/creativesoftwarefdn/weaviate/connectors/gremlin"
 	"github.com/creativesoftwarefdn/weaviate/connectors/kvcache"
-	"github.com/creativesoftwarefdn/weaviate/connectors/tinkerpop"
 	"github.com/creativesoftwarefdn/weaviate/connectors/utils"
 	"github.com/creativesoftwarefdn/weaviate/graphqlapi"
 	"github.com/creativesoftwarefdn/weaviate/messages"
@@ -155,7 +155,7 @@ func deleteKey(ctx context.Context, databaseConnector dbconnector.DatabaseConnec
 func GetAllConnectors() []dbconnector.DatabaseConnector {
 	// Set all existing connectors
 	connectors := []dbconnector.DatabaseConnector{
-		&tinkerpop.Tinkerpop{},
+		&gremlin.Gremlin{},
 	}
 
 	return connectors

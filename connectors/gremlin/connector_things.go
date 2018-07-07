@@ -11,7 +11,7 @@
  * Contact: @CreativeSofwFdn / bob@kub.design
  */
 
-package tinkerpop
+package gremlin
 
 import (
 	"context"
@@ -27,10 +27,10 @@ import (
 // AddThing adds a thing to the Foobar database with the given UUID.
 // Takes the thing and a UUID as input.
 // Thing is already validated against the ontology
-func (f *Tinkerpop) AddThing(ctx context.Context, thing *models.Thing, UUID strfmt.UUID) error {
+func (f *Gremlin) AddThing(ctx context.Context, thing *models.Thing, UUID strfmt.UUID) error {
 
 	// convert the thing to a Vertex and and Edge.
-	err := f.thingOrActionToTinkerpop(UUID, thing, "thing", "add")
+	err := f.thingToGremlin(UUID, thing, "add")
 
 	// on error fail
 	if err != nil {
@@ -42,7 +42,7 @@ func (f *Tinkerpop) AddThing(ctx context.Context, thing *models.Thing, UUID strf
 }
 
 // GetThing fills the given ThingGetResponse with the values from the database, based on the given UUID.
-func (f *Tinkerpop) GetThing(ctx context.Context, UUID strfmt.UUID, thingResponse *models.ThingGetResponse) error {
+func (f *Gremlin) GetThing(ctx context.Context, UUID strfmt.UUID, thingResponse *models.ThingGetResponse) error {
 
 	// define the ID vertex and the UUID to fetch
 	result, err := f.client.Execute(
@@ -74,7 +74,7 @@ func (f *Tinkerpop) GetThing(ctx context.Context, UUID strfmt.UUID, thingRespons
 }
 
 // GetThings fills the given ThingsListResponse with the values from the database, based on the given UUIDs.
-func (f *Tinkerpop) GetThings(ctx context.Context, UUIDs []strfmt.UUID, thingResponse *models.ThingsListResponse) error {
+func (f *Gremlin) GetThings(ctx context.Context, UUIDs []strfmt.UUID, thingResponse *models.ThingsListResponse) error {
 	f.messaging.DebugMessage(fmt.Sprintf("GetThings: %s", UUIDs))
 
 	// If success return nil, otherwise return the error
@@ -82,7 +82,7 @@ func (f *Tinkerpop) GetThings(ctx context.Context, UUIDs []strfmt.UUID, thingRes
 }
 
 // ListThings fills the given ThingsListResponse with the values from the database, based on the given parameters.
-func (f *Tinkerpop) ListThings(ctx context.Context, first int, offset int, keyID strfmt.UUID, wheres []*connutils.WhereQuery, thingsResponse *models.ThingsListResponse) error {
+func (f *Gremlin) ListThings(ctx context.Context, first int, offset int, keyID strfmt.UUID, wheres []*connutils.WhereQuery, thingsResponse *models.ThingsListResponse) error {
 
 	// find the edges (if any)
 	result, err := f.client.Execute(
@@ -91,7 +91,7 @@ func (f *Tinkerpop) ListThings(ctx context.Context, first int, offset int, keyID
 		map[string]string{},
 	)
 
-	// Loop over the Tinkerpop results
+	// Loop over the Gremlin results
 	for thingKey := range result.([]interface{})[0].([]interface{}) {
 
 		// define singleThing
@@ -122,10 +122,10 @@ func (f *Tinkerpop) ListThings(ctx context.Context, first int, offset int, keyID
 }
 
 // UpdateThing updates the Thing in the DB at the given UUID.
-func (f *Tinkerpop) UpdateThing(ctx context.Context, thing *models.Thing, UUID strfmt.UUID) error {
+func (f *Gremlin) UpdateThing(ctx context.Context, thing *models.Thing, UUID strfmt.UUID) error {
 
 	// get the vertexes
-	err := f.thingOrActionToTinkerpop(UUID, thing, "thing", "update")
+	err := f.thingToGremlin(UUID, thing, "update")
 
 	if err != nil {
 		return err
@@ -136,7 +136,7 @@ func (f *Tinkerpop) UpdateThing(ctx context.Context, thing *models.Thing, UUID s
 }
 
 // DeleteThing deletes the Thing in the DB at the given UUID.
-func (f *Tinkerpop) DeleteThing(ctx context.Context, thing *models.Thing, UUID strfmt.UUID) error {
+func (f *Gremlin) DeleteThing(ctx context.Context, thing *models.Thing, UUID strfmt.UUID) error {
 
 	// Remove based on type and uuid
 	_, err := f.client.Execute(
@@ -155,11 +155,11 @@ func (f *Tinkerpop) DeleteThing(ctx context.Context, thing *models.Thing, UUID s
 }
 
 // HistoryThing fills the history of a thing based on its UUID
-func (f *Tinkerpop) HistoryThing(ctx context.Context, UUID strfmt.UUID, history *models.ThingHistory) error {
+func (f *Gremlin) HistoryThing(ctx context.Context, UUID strfmt.UUID, history *models.ThingHistory) error {
 	return nil
 }
 
 // MoveToHistoryThing moves a thing to history
-func (f *Tinkerpop) MoveToHistoryThing(ctx context.Context, thing *models.Thing, UUID strfmt.UUID, deleted bool) error {
+func (f *Gremlin) MoveToHistoryThing(ctx context.Context, thing *models.Thing, UUID strfmt.UUID, deleted bool) error {
 	return nil
 }
