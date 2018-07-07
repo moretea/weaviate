@@ -44,7 +44,6 @@ import (
 	"github.com/creativesoftwarefdn/weaviate/broker"
 	"github.com/creativesoftwarefdn/weaviate/config"
 	"github.com/creativesoftwarefdn/weaviate/connectors"
-	"github.com/creativesoftwarefdn/weaviate/connectors/cassandra"
 	"github.com/creativesoftwarefdn/weaviate/connectors/dataloader"
 	"github.com/creativesoftwarefdn/weaviate/connectors/kvcache"
 	"github.com/creativesoftwarefdn/weaviate/connectors/tinkerpop"
@@ -157,7 +156,6 @@ func GetAllConnectors() []dbconnector.DatabaseConnector {
 	// Set all existing connectors
 	connectors := []dbconnector.DatabaseConnector{
 		&tinkerpop.Tinkerpop{},
-		&cassandra.Cassandra{},
 	}
 
 	return connectors
