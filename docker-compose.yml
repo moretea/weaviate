@@ -11,16 +11,11 @@
 # Contact: @CreativeSofwFdn / bob@kub.design
 ###
 version: '3.2'
-services:
+services:  
   db:
-    image: cassandra:3
-    volumes: 
-      - ~/cassandra:/var/lib/cassandra
-    ports: 
-      - 7000:7000
-      - 9042:9042
-    environment: 
-      CASSANDRA_START_RPC: "true"
+    image: jbmusso/gremlin-server:latest
+    ports:
+      - 8182:8182
   weaviate-broker:
     image: creativesoftwarefdn/weaviate-broker:latest
     ports:

@@ -29,8 +29,18 @@ import (
 // Thing is already validated against the ontology
 func (f *Gremlin) AddThing(ctx context.Context, thing *models.Thing, UUID strfmt.UUID) error {
 
+	f._getAll("AddThing")
+
 	// convert the thing to a Vertex and and Edge.
 	err := f.thingToGremlin(UUID, thing, "add")
+
+	// on error fail
+	if err != nil {
+		return err
+	}
+
+	// connect to the key
+	err = f.connectToKey(UUID, thing.Key.NrDollarCref, "thing")
 
 	// on error fail
 	if err != nil {
@@ -44,10 +54,13 @@ func (f *Gremlin) AddThing(ctx context.Context, thing *models.Thing, UUID strfmt
 // GetThing fills the given ThingGetResponse with the values from the database, based on the given UUID.
 func (f *Gremlin) GetThing(ctx context.Context, UUID strfmt.UUID, thingResponse *models.ThingGetResponse) error {
 
+	f._getAll("GetThing")
+
 	// define the ID vertex and the UUID to fetch
 	result, err := f.client.Execute(
-		`g.V().has("uuid", uuid).has("type", objectType)`,
-		map[string]string{"uuid": UUID.String(), "objectType": "thing"},
+		`g.V().hasLabel("thing").has("uuid", "`+UUID.String()+`")`,
+		//`g.V().has("uuid", "4fabb4b7-8a06-4fd3-bc22-bc14f284670b").has("type", "thing")`,
+		map[string]string{},
 		map[string]string{},
 	)
 
@@ -86,7 +99,7 @@ func (f *Gremlin) ListThings(ctx context.Context, first int, offset int, keyID s
 
 	// find the edges (if any)
 	result, err := f.client.Execute(
-		`g.V().has("type", objectType).range(`+strconv.Itoa((first*offset))+`, `+strconv.Itoa(first)+`)`,
+		`g.V().hasLabel("thing").has("type", objectType).range(`+strconv.Itoa((first*offset))+`, `+strconv.Itoa(first)+`)`,
 		map[string]string{"objectType": "thing"},
 		map[string]string{},
 	)
@@ -140,8 +153,8 @@ func (f *Gremlin) DeleteThing(ctx context.Context, thing *models.Thing, UUID str
 
 	// Remove based on type and uuid
 	_, err := f.client.Execute(
-		`g.V().has("uuid", uuid).has("type", objectType).drop()`,
-		map[string]string{"uuid": UUID.String(), "objectType": "thing"},
+		`g.V().hasLabel("thing").has("uuid", `+UUID.String()+`).drop()`,
+		map[string]string{},
 		map[string]string{},
 	)
 

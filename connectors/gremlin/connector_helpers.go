@@ -15,8 +15,10 @@ package gremlin
 
 import (
 	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	errors_ "errors"
+	"fmt"
 	"reflect"
 	"strconv"
 	"strings"
@@ -28,7 +30,65 @@ import (
 	"github.com/creativesoftwarefdn/weaviate/models"
 )
 
-// thingToVertex translates a thing struct into a vertex string
+// helper function to get all things
+func (f *Gremlin) _getAll(what string) {
+
+	fmt.Println("--------")
+	fmt.Println(what)
+
+	all, _ := f.client.Execute(
+		`g.V().hasLabel("thing").has("uuid", "78bf463c-c992-443b-82f6-9157765c570b")`,
+		map[string]string{},
+		map[string]string{},
+	)
+
+	edgesBytes, _ := json.Marshal(all)
+
+	fmt.Println(string(edgesBytes))
+	fmt.Println("--------")
+
+}
+
+// keyToGremlin translates a thing struct into a vertex string
+func (f *Gremlin) keyToGremlin(objToHandle *models.Key, token string, UUID string) (string, string) {
+
+	// create vertex and edge buffers
+	var vertex bytes.Buffer
+	var edge bytes.Buffer
+
+	// set general fields
+	vertex.WriteString(`g.addV("key").property("uuid", "` + UUID + `").property("type", "key")`)
+
+	// set boolean properties
+	isRoot := objToHandle.Parent == nil
+
+	vertex.WriteString(`.property("isRoot", ` + strconv.FormatBool(isRoot) + `)`)
+	vertex.WriteString(`.property("delete", ` + strconv.FormatBool(objToHandle.Delete) + `)`)
+	vertex.WriteString(`.property("execute", ` + strconv.FormatBool(objToHandle.Execute) + `)`)
+	vertex.WriteString(`.property("read", ` + strconv.FormatBool(objToHandle.Read) + `)`)
+	vertex.WriteString(`.property("write", ` + strconv.FormatBool(objToHandle.Write) + `)`)
+
+	// set string properties
+	vertex.WriteString(`.property("email", "` + objToHandle.Email + `")`)
+
+	// set array properties
+	vertex.WriteString(`.property("IPOrigin", "` + strings.Join(objToHandle.IPOrigin, ";") + `")`)
+
+	// set integers
+	vertex.WriteString(`.property("keyExpiresUnix", ` + strconv.FormatInt(objToHandle.KeyExpiresUnix, 10) + `)`)
+
+	// add the secured and encrypted token
+	vertex.WriteString(`.property("__token", "` + base64.StdEncoding.EncodeToString([]byte(token)) + `")`)
+
+	// if isRoot is false, an edge needs to be added
+	if isRoot == false {
+		fmt.Println(objToHandle.Parent)
+	}
+
+	return vertex.String(), edge.String()
+}
+
+// thingToGremlin translates a thing struct into a vertex string
 func (f *Gremlin) thingToGremlin(UUID strfmt.UUID, objToHandle *models.Thing, addOrUpdate string) error {
 
 	typeOfObject := "thing"
@@ -40,21 +100,22 @@ func (f *Gremlin) thingToGremlin(UUID strfmt.UUID, objToHandle *models.Thing, ad
 
 	// add vertext class and ID
 	if addOrUpdate == "add" {
-		vertex.WriteString(`g.addV("` + objToHandle.AtClass + `")`)
+		vertex.WriteString(`g.addV("` + typeOfObject + `")`)
 	} else if addOrUpdate == "update" {
-		vertex.WriteString(`g.V()`)
-		update.WriteString(`g.V()`)
+		vertex.WriteString(`g.V().hasLabel("` + typeOfObject + `")`)
+		update.WriteString(`g.V().hasLabel("` + typeOfObject + `")`)
 	} else {
 		return errors_.New("addOrUpdate should be 'add' or 'update'")
 	}
 
 	// define the type and the ID
-	vertex.WriteString(`.property("uuid", uuid).property("type", "` + typeOfObject + `")`)
+	vertex.WriteString(`.property("uuid", "` + UUID.String() + `").property("type", "` + typeOfObject + `")`)
 	if addOrUpdate == "update" {
-		update.WriteString(`.property("uuid", uuid).property("type", "` + typeOfObject + `").outE().drop()`)
+		update.WriteString(`.property("uuid", "` + UUID.String() + `").property("type", "` + typeOfObject + `").outE().drop()`)
 	}
 
 	// set the meta values (@class will be the vector)
+	vertex.WriteString(`.property("atClass", "` + objToHandle.AtClass + `")`)
 	vertex.WriteString(`.property("context", "` + objToHandle.AtContext + `")`)
 	vertex.WriteString(`.property("creationTimeUnix", "` + strconv.FormatInt(objToHandle.CreationTimeUnix, 10) + `")`)
 	vertex.WriteString(`.property("lastUpdateTimeUnix", "` + strconv.FormatInt(objToHandle.LastUpdateTimeUnix, 10) + `")`)
@@ -92,7 +153,7 @@ func (f *Gremlin) thingToGremlin(UUID strfmt.UUID, objToHandle *models.Thing, ad
 					// Get the singleRef values
 					singleRef := v.Interface().(*models.SingleRef)
 					// create the edge
-					edge = append(edge, `g.addE("schema__`+e.String()+`").from(g.V().has("uuid", uuid)).to(g.V().has("uuid", "`+singleRef.NrDollarCref.String()+`")).property("\$cref", "`+singleRef.NrDollarCref.String()+`").property("type", "`+singleRef.Type+`").property("locationUrl", "`+*singleRef.LocationURL+`")`)
+					edge = append(edge, `g.addE("schema__`+e.String()+`").from(g.V().hasLabel("`+typeOfObject+`").has("uuid", uuid)).to(g.V().hasLabel("`+typeOfObject+`").has("uuid", "`+singleRef.NrDollarCref.String()+`")).property("\$cref", "`+singleRef.NrDollarCref.String()+`").property("type", "`+singleRef.Type+`").property("locationUrl", "`+*singleRef.LocationURL+`")`)
 				} else {
 					f.messaging.ExitError(78, "The type "+reflect.TypeOf(v.Interface()).String()+" is not found.")
 				}
@@ -105,7 +166,7 @@ func (f *Gremlin) thingToGremlin(UUID strfmt.UUID, objToHandle *models.Thing, ad
 	// execute the Vertex query with uuid as binding, result is not used because we send out "202 Accepted" and assume a succes because validation takes place before this function runs
 	addResult, err := f.client.Execute(
 		vertex.String(),
-		map[string]string{"uuid": UUID.String()},
+		map[string]string{},
 		map[string]string{},
 	)
 
@@ -126,7 +187,7 @@ func (f *Gremlin) thingToGremlin(UUID strfmt.UUID, objToHandle *models.Thing, ad
 		// execute the Edge query
 		updateResult, err := f.client.Execute(
 			update.String(),
-			map[string]string{"uuid": UUID.String()},
+			map[string]string{},
 			map[string]string{},
 		)
 
@@ -183,10 +244,10 @@ func (f *Gremlin) actionToGremlin(UUID strfmt.UUID, objToHandle *models.Action, 
 
 	// add vertext class and ID
 	if addOrUpdate == "add" {
-		vertex.WriteString(`g.addV("` + objToHandle.AtClass + `")`)
+		vertex.WriteString(`g.addV("` + typeOfObject + `")`)
 	} else if addOrUpdate == "update" {
-		vertex.WriteString(`g.V()`)
-		update.WriteString(`g.V()`)
+		vertex.WriteString(`g.V().hasLabel("` + typeOfObject + `")`)
+		update.WriteString(`g.V().hasLabel("` + typeOfObject + `")`)
 	} else {
 		return errors_.New("addOrUpdate should be 'add' or 'update'")
 	}
@@ -235,7 +296,7 @@ func (f *Gremlin) actionToGremlin(UUID strfmt.UUID, objToHandle *models.Action, 
 					// Get the singleRef values
 					singleRef := v.Interface().(*models.SingleRef)
 					// create the edge
-					edge = append(edge, `g.addE("schema__`+e.String()+`").from(g.V().has("uuid", uuid)).to(g.V().has("uuid", "`+singleRef.NrDollarCref.String()+`")).property("\$cref", "`+singleRef.NrDollarCref.String()+`").property("type", "`+singleRef.Type+`").property("locationUrl", "`+*singleRef.LocationURL+`")`)
+					edge = append(edge, `g.addE("schema__`+e.String()+`").from(g.V().hasLabel("`+typeOfObject+`").has("uuid", uuid)).to(g.V().hasLabel("`+typeOfObject+`").has("uuid", "`+singleRef.NrDollarCref.String()+`")).property("\$cref", "`+singleRef.NrDollarCref.String()+`").property("type", "`+singleRef.Type+`").property("locationUrl", "`+*singleRef.LocationURL+`")`)
 				} else {
 					f.messaging.ExitError(78, "The type "+reflect.TypeOf(v.Interface()).String()+" is not found.")
 				}
@@ -328,88 +389,97 @@ func (f *Gremlin) createCrefObject(UUID strfmt.UUID, location string, refType co
 	return &crefObj
 }
 
-// processes a single thing
-func (f *Gremlin) processSingleThing(result interface{}, thingNo int, thingResponse *models.ThingGetResponse) error {
-
-	//thingResponse := &models.ThingGetResponse{}
-
-	// This is a temporary key [FIX THIS]
-	thingResponse.Key = f.createCrefObject("29ece1d8-c433-4757-b258-0b278478e17a", f.serverAddress, connutils.RefTypeKey)
-
-	// Create the schema Map, this map will contain all the results
-	responseSchema := make(map[string]interface{})
-
+// gets a single value from and id value pair
+func (f *Gremlin) getSinglePropertyValue(haystack interface{}, needle string, no int) interface{} {
 	// Loop over the Gremlin results
-	for key, value := range result.([]interface{})[0].([]interface{})[thingNo].(map[string]interface{}) {
+	for k, v := range haystack.([]interface{})[0].([]interface{})[no].(map[string]interface{}) {
 		// add schema properties
-		if key == "properties" {
-			for propKey, propValue := range value.(map[string]interface{}) {
-				// set class name (called Vertex Label)
-				if propKey == "uuid" {
-					for _, propValueValue := range propValue.([]interface{}) {
-						for propValueKeySingle, propValueValueSingle := range propValueValue.(map[string]interface{}) {
-							if propValueKeySingle == "value" {
-								thingResponse.ThingID = strfmt.UUID(propValueValueSingle.(string))
-							}
+		if k == "properties" {
+			// find the property in the schema
+			for propK, propV := range v.(map[string]interface{}) {
+				if propK == needle {
+					// find the value
+					for propKSingle, propVSingle := range propV.([]interface{})[0].(map[string]interface{}) {
+						if propKSingle == "value" {
+							return propVSingle
 						}
 					}
 				}
 			}
 		}
 	}
+	return nil
+}
 
-	// Loop over the Gremlin results
+func (f *Gremlin) connectToKey(UUID strfmt.UUID, KeyUUID strfmt.UUID, typeToConnect string) error {
+
+	// execute the Edge query
+	_, err := f.client.Execute(
+		`g.addE("key").from(g.V().hasLabel("`+typeToConnect+`").has("uuid", "`+UUID.String()+`")).to(g.V().hasLabel("key").has("uuid", "`+KeyUUID.String()+`")).property("fromThing", "`+UUID.String()+`").property("toKeyUUID", "`+KeyUUID.String()+`")`,
+		map[string]string{},
+		map[string]string{},
+	)
+
+	// on error, fail
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (f *Gremlin) keyUUIDFromEdge(edgeValue interface{}) (strfmt.UUID, error) {
+
+	keyEdges := KeyEdge{}
+
+	keyEdgesBytes, err := json.Marshal(edgeValue)
+
+	if err != nil {
+		return strfmt.UUID(0), err
+	}
+
+	err = json.Unmarshal(keyEdgesBytes, &keyEdges)
+
+	if err != nil {
+		return strfmt.UUID(0), err
+	}
+
+	// find the edges (if any)
+	keyEdgesResult, err := f.client.Execute(
+		`g.V().hasId("`+strconv.Itoa(keyEdges.InV)+`")`,
+		map[string]string{},
+		map[string]string{},
+	)
+
+	// in case of error, return the error
+	if err != nil {
+		return strfmt.UUID(0), err
+	}
+
+	return strfmt.UUID(f.getSinglePropertyValue(keyEdgesResult, "uuid", 0).(string)), nil
+}
+
+// processes a single thing
+func (f *Gremlin) processSingleThing(result interface{}, thingNo int, thingResponse *models.ThingGetResponse) error {
+
+	// Create the schema Map, this map will contain all the results
+	responseSchema := make(map[string]interface{})
+
+	// set meta values (String)
+	thingResponse.ThingID = strfmt.UUID(f.getSinglePropertyValue(result, "uuid", thingNo).(string))
+	thingResponse.AtClass = f.getSinglePropertyValue(result, "atClass", thingNo).(string)
+	thingResponse.AtContext = f.getSinglePropertyValue(result, "context", thingNo).(string)
+
+	// set meta values (int64)
+	thingResponse.CreationTimeUnix, _ = strconv.ParseInt(f.getSinglePropertyValue(result, "creationTimeUnix", thingNo).(string), 10, 64)
+	thingResponse.LastUpdateTimeUnix, _ = strconv.ParseInt(f.getSinglePropertyValue(result, "lastUpdateTimeUnix", thingNo).(string), 10, 64)
+
+	// Loop over the Gremlin schema, results
 	for key, value := range result.([]interface{})[0].([]interface{})[thingNo].(map[string]interface{}) {
-
-		// set class name (called Vertex Label)
-		if key == "label" {
-			thingResponse.AtClass = value.(string)
-		}
-
 		// add schema properties
 		if key == "properties" {
+
 			for propKey, propValue := range value.(map[string]interface{}) {
-
-				// set class name (called Vertex Label)
-				if propKey == "context" {
-					for _, propValueValue := range propValue.([]interface{}) {
-						for propValueKeySingle, propValueValueSingle := range propValueValue.(map[string]interface{}) {
-							if propValueKeySingle == "value" {
-								thingResponse.AtContext = propValueValueSingle.(string)
-							}
-						}
-					}
-				}
-
-				// set class name (called Vertex Label)
-				if propKey == "creationTimeUnix" {
-					for _, propValueValue := range propValue.([]interface{}) {
-						for propValueKeySingle, propValueValueSingle := range propValueValue.(map[string]interface{}) {
-							if propValueKeySingle == "value" {
-								convertToInt64, err := strconv.ParseInt(propValueValueSingle.(string), 10, 64)
-								if err != nil {
-									return err
-								}
-								thingResponse.CreationTimeUnix = convertToInt64
-							}
-						}
-					}
-				}
-
-				// set class name (called Vertex Label)
-				if propKey == "lastUpdateTimeUnix" {
-					for _, propValueValue := range propValue.([]interface{}) {
-						for propValueKeySingle, propValueValueSingle := range propValueValue.(map[string]interface{}) {
-							if propValueKeySingle == "value" {
-								convertToInt64, err := strconv.ParseInt(propValueValueSingle.(string), 10, 64)
-								if err != nil {
-									return err
-								}
-								thingResponse.LastUpdateTimeUnix = convertToInt64
-							}
-						}
-					}
-				}
 
 				// check if the key starts with schema__ prefix
 				if strings.HasPrefix(propKey, "schema__") {
@@ -428,8 +498,8 @@ func (f *Gremlin) processSingleThing(result interface{}, thingNo int, thingRespo
 
 		// find the edges (if any)
 		result, err := f.client.Execute(
-			`g.V().has("uuid", uuid).has("type", objectType).outE()`,
-			map[string]string{"uuid": string(thingResponse.ThingID), "objectType": "thing"},
+			`g.V().hasLabel("thing").has("uuid", "`+string(thingResponse.ThingID)+`").outE()`,
+			map[string]string{},
 			map[string]string{},
 		)
 
@@ -459,10 +529,25 @@ func (f *Gremlin) processSingleThing(result interface{}, thingNo int, thingRespo
 
 		// add the properties to the edges. Note that the NrDollarCref is _not_ the Gremlin/Gremlin ID but the Weaviate UUID
 		for _, edgeValue := range edges[0] {
-			responseSchema[edgeValue.Label[8:]] = models.SingleRef{
-				NrDollarCref: edgeValue.Properties.NrDollarCref,
-				Type:         edgeValue.Properties.Type,
-				LocationURL:  edgeValue.Properties.LocationURL,
+			if len(edgeValue.Label) >= 8 { // should be larger than 8
+				if edgeValue.Label[0:8] == "schema__" { // only handle schema edges
+					responseSchema[edgeValue.Label[8:]] = models.SingleRef{
+						NrDollarCref: edgeValue.Properties.NrDollarCref,
+						Type:         edgeValue.Properties.Type,
+						LocationURL:  edgeValue.Properties.LocationURL,
+					}
+				}
+			} else if edgeValue.Label == "key" { // smaller then 8 and = "key"
+				// get the related key and return
+				keyUUID, err := f.keyUUIDFromEdge(edgeValue)
+
+				// in case of error, return the error
+				if err != nil {
+					return err
+				}
+
+				thingResponse.Key = f.createCrefObject(keyUUID, f.serverAddress, connutils.RefTypeKey)
+
 			}
 		}
 
@@ -485,82 +570,26 @@ func (f *Gremlin) processSingleThing(result interface{}, thingNo int, thingRespo
 func (f *Gremlin) processSingleAction(result interface{}, actionNo int, actionResponse *models.ActionGetResponse) error {
 
 	// This is a temporary key [FIX THIS]
-	actionResponse.Key = f.createCrefObject("29ece1d8-c433-4757-b258-0b278478e17a", f.serverAddress, connutils.RefTypeKey)
+	//actionResponse.Key = f.createCrefObject("29ece1d8-c433-4757-b258-0b278478e17a", f.serverAddress, connutils.RefTypeKey)
 
 	// Create the schema Map, this map will contain all the results
 	responseSchema := make(map[string]interface{})
 
-	// Loop over the Gremlin results
-	for key, value := range result.([]interface{})[0].([]interface{})[actionNo].(map[string]interface{}) {
-		// add schema properties
-		if key == "properties" {
-			for propKey, propValue := range value.(map[string]interface{}) {
-				// set class name (called Vertex Label)
-				if propKey == "uuid" {
-					for _, propValueValue := range propValue.([]interface{}) {
-						for propValueKeySingle, propValueValueSingle := range propValueValue.(map[string]interface{}) {
-							if propValueKeySingle == "value" {
-								actionResponse.ActionID = strfmt.UUID(propValueValueSingle.(string))
-							}
-						}
-					}
-				}
-			}
-		}
-	}
+	// set meta values (String)
+	actionResponse.ActionID = strfmt.UUID(f.getSinglePropertyValue(result, "uuid", 0).(string))
+	actionResponse.AtClass = f.getSinglePropertyValue(result, "atClass", 0).(string)
+	actionResponse.AtContext = f.getSinglePropertyValue(result, "context", 0).(string)
+
+	// set meta values (int64)
+	actionResponse.CreationTimeUnix, _ = strconv.ParseInt(f.getSinglePropertyValue(result, "creationTimeUnix", 0).(string), 10, 64)
+	actionResponse.LastUpdateTimeUnix, _ = strconv.ParseInt(f.getSinglePropertyValue(result, "lastUpdateTimeUnix", 0).(string), 10, 64)
 
 	// Loop over the Gremlin results
 	for key, value := range result.([]interface{})[0].([]interface{})[actionNo].(map[string]interface{}) {
 
-		// set class name (called Vertex Label)
-		if key == "label" {
-			actionResponse.AtClass = value.(string)
-		}
-
 		// add schema properties
 		if key == "properties" {
 			for propKey, propValue := range value.(map[string]interface{}) {
-
-				// set class name (called Vertex Label)
-				if propKey == "context" {
-					for _, propValueValue := range propValue.([]interface{}) {
-						for propValueKeySingle, propValueValueSingle := range propValueValue.(map[string]interface{}) {
-							if propValueKeySingle == "value" {
-								actionResponse.AtContext = propValueValueSingle.(string)
-							}
-						}
-					}
-				}
-
-				// set class name (called Vertex Label)
-				if propKey == "creationTimeUnix" {
-					for _, propValueValue := range propValue.([]interface{}) {
-						for propValueKeySingle, propValueValueSingle := range propValueValue.(map[string]interface{}) {
-							if propValueKeySingle == "value" {
-								convertToInt64, err := strconv.ParseInt(propValueValueSingle.(string), 10, 64)
-								if err != nil {
-									return err
-								}
-								actionResponse.CreationTimeUnix = convertToInt64
-							}
-						}
-					}
-				}
-
-				// set class name (called Vertex Label)
-				if propKey == "lastUpdateTimeUnix" {
-					for _, propValueValue := range propValue.([]interface{}) {
-						for propValueKeySingle, propValueValueSingle := range propValueValue.(map[string]interface{}) {
-							if propValueKeySingle == "value" {
-								convertToInt64, err := strconv.ParseInt(propValueValueSingle.(string), 10, 64)
-								if err != nil {
-									return err
-								}
-								actionResponse.LastUpdateTimeUnix = convertToInt64
-							}
-						}
-					}
-				}
 
 				// check if the key starts with schema__ prefix
 				if strings.HasPrefix(propKey, "schema__") {
@@ -579,8 +608,8 @@ func (f *Gremlin) processSingleAction(result interface{}, actionNo int, actionRe
 
 		// find the edges (if any)
 		result, err := f.client.Execute(
-			`g.V().has("uuid", uuid).has("type", objectType).outE()`,
-			map[string]string{"uuid": string(actionResponse.ActionID), "objectType": "action"},
+			`g.V().hasLabel("key").has("uuid", `+string(actionResponse.ActionID)+`).outE()`,
+			map[string]string{},
 			map[string]string{},
 		)
 
@@ -610,10 +639,26 @@ func (f *Gremlin) processSingleAction(result interface{}, actionNo int, actionRe
 
 		// add the properties to the edges. Note that the NrDollarCref is _not_ the Gremlin/Gremlin ID but the Weaviate UUID
 		for _, edgeValue := range edges[0] {
-			responseSchema[edgeValue.Label[8:]] = models.SingleRef{
-				NrDollarCref: edgeValue.Properties.NrDollarCref,
-				Type:         edgeValue.Properties.Type,
-				LocationURL:  edgeValue.Properties.LocationURL,
+			if len(edgeValue.Label) >= 8 { // should be larger than 8
+				if edgeValue.Label[0:8] == "schema__" { // only handle schema edges
+					responseSchema[edgeValue.Label[8:]] = models.SingleRef{
+						NrDollarCref: edgeValue.Properties.NrDollarCref,
+						Type:         edgeValue.Properties.Type,
+						LocationURL:  edgeValue.Properties.LocationURL,
+					}
+				}
+			} else if edgeValue.Label == "key" { // smaller then 8 and = "key"
+				// get the related key and return
+				keyUUID, err := f.keyUUIDFromEdge(edgeValue)
+
+				// in case of error, return the error
+				if err != nil {
+					return err
+				}
+
+				// return key
+				actionResponse.Key = f.createCrefObject(keyUUID, f.serverAddress, connutils.RefTypeKey)
+
 			}
 		}
 

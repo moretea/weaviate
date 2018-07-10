@@ -83,10 +83,10 @@ func CreateRootKeyObject(key *models.Key) (hashedToken string, UUID strfmt.UUID)
 	key.Execute = true
 
 	// Set Mail
-	key.Email = "weaviate@weaviate.nl"
+	key.Email = "hello@creativesoftwarefdn.org"
 
 	// Print the key
-	log.Println("INFO: No root key was found, a new root key is created. More info: https://github.com/creativesoftwarefdn/weaviate/blob/develop/README.md#authentication")
+	log.Println("INFO: No root key was found, a new root key is created. More info: https://github.com/creativesoftwarefdn/weaviate")
 	log.Println("INFO: Auto set allowed IPs to: ", key.IPOrigin)
 	log.Println("ROOTTOKEN=" + token)
 	log.Println("ROOTKEY=" + string(UUID))

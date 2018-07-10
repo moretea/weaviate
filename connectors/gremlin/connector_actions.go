@@ -36,6 +36,13 @@ func (f *Gremlin) AddAction(ctx context.Context, action *models.Action, UUID str
 		return err
 	}
 
+	err = f.connectToKey(UUID, action.Key.NrDollarCref, "action")
+
+	// on error fail
+	if err != nil {
+		return err
+	}
+
 	// If success return nil, otherwise return the error
 	return nil
 }

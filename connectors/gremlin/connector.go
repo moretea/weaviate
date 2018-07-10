@@ -20,10 +20,12 @@ import (
 	"runtime"
 	"strconv"
 
+	"github.com/go-openapi/strfmt"
 	"github.com/mitchellh/mapstructure"
 	"github.com/qasaur/gremgo"
 
 	"github.com/creativesoftwarefdn/weaviate/config"
+	"github.com/creativesoftwarefdn/weaviate/connectors/utils"
 	"github.com/creativesoftwarefdn/weaviate/messages"
 	"github.com/creativesoftwarefdn/weaviate/models"
 	"github.com/creativesoftwarefdn/weaviate/schema"
@@ -52,7 +54,7 @@ type Config struct {
 	Port int
 }
 
-// Edge results from Gremlin
+// Edges results from Gremlin
 type Edges [][]struct {
 	ID         int              `json:"id"`
 	InV        int              `json:"inV"`
@@ -62,6 +64,20 @@ type Edges [][]struct {
 	OutVLabel  string           `json:"outVLabel"`
 	Properties models.SingleRef `json:"properties"`
 	Type       string           `json:"type"`
+}
+
+// KeyEdge Struct, returns the Gremlin representation of the Keys
+type KeyEdge struct {
+	ID         int    `json:"id"`
+	InV        int    `json:"inV"`
+	InVLabel   string `json:"inVLabel"`
+	Label      string `json:"label"`
+	OutV       int    `json:"outV"`
+	OutVLabel  string `json:"outVLabel"`
+	Properties struct {
+		KeyUUID strfmt.UUID `json:"keyUUID"`
+	} `json:"properties"`
+	Type string `json:"type"`
 }
 
 func (f *Gremlin) trace() {
@@ -161,33 +177,42 @@ func (f *Gremlin) Connect() error {
 // Init 1st initializes the schema in the database and 2nd creates a root key.
 func (f *Gremlin) Init() error {
 
-	/*
-	 * 1.  If a schema is needed, you need to add the schema to the DB here.
-	 * 1.1 Create the (thing or action) classes first, classes that a node (subject or object) can have (for example: Building, Person, etcetera)
-	 * 2.  Create a root key.
-	 */
+	f._getAll("Init")
 
-	// Example of creating rootkey
-	//
-	// Add ROOT-key if not exists
-	// Search for Root key
+	// Check if there is a root key
+	keyResult, err := f.client.Execute(
+		`g.V().hasLabel("key").has("isRoot", true).has("type", "key").count()`,
+		map[string]string{},
+		map[string]string{},
+	)
 
-	// SEARCH FOR ROOTKEY
+	// return error
+	if err != nil {
+		return err
+	}
 
-	//if totalResult.Root.Count == 0 {
-	//	f.messaging.InfoMessage("No root-key found.")
-	//
-	//	// Create new object and fill it
-	//	keyObject := models.Key{}
-	//	token := connutils.CreateRootKeyObject(&keyObject)
-	//
-	//	err = f.AddKey(&keyObject, connutils.GenerateUUID(), token)
-	//
-	//	if err != nil {
-	//		return err
-	//	}
-	//}
-	// END KEYS
+	fmt.Println("KEY RESULT")
+	fmt.Println(keyResult)
+
+	// check if there is a root key
+	if keyResult.([]interface{})[0].([]interface{})[0].(float64) == 0 {
+		f.messaging.InfoMessage("No root key is found, a new one will be generated - RENEW DIRECTLY AFTER RECEIVING THIS MESSAGE")
+
+		// Create new object and fill it
+		keyObject := models.Key{}
+		token, UUID := connutils.CreateRootKeyObject(&keyObject)
+
+		// Add the root-key to the database
+		ctx := context.Background()
+		err = f.AddKey(ctx, &keyObject, UUID, token)
+
+		if err != nil {
+			return err
+		}
+
+	} else {
+		f.messaging.InfoMessage("Keys are set and a rootkey is available")
+	}
 
 	// If success return nil, otherwise return the error
 	return nil

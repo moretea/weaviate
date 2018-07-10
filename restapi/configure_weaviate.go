@@ -895,6 +895,7 @@ func configureAPI(api *operations.WeaviateAPI) http.Handler {
 		return things.NewWeaviateThingsDeleteNoContent()
 	})
 	api.ThingsWeaviateThingsGetHandler = things.WeaviateThingsGetHandlerFunc(func(params things.WeaviateThingsGetParams, principal interface{}) middleware.Responder {
+
 		// Initialize response
 		responseObject := models.ThingGetResponse{}
 		responseObject.Schema = map[string]models.JSONObject{}
@@ -1366,7 +1367,7 @@ func setupMiddlewares(handler http.Handler) http.Handler {
 		r.Header.Set("X-API-KEY", string(jkth))
 		r.Header.Set("X-API-TOKEN", string(jkth))
 
-		messaging.InfoMessage("generated both headers X-API-KEY and X-API-TOKEN")
+		messaging.DebugMessage("generated both headers X-API-KEY and X-API-TOKEN")
 
 		ctx := r.Context()
 		ctx, err := dbConnector.Attach(ctx)

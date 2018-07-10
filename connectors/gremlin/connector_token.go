@@ -15,14 +15,16 @@ package gremlin
 
 import (
 	"context"
+	"encoding/base64"
+	"reflect"
+	"strings"
 
 	"github.com/go-openapi/strfmt"
 
-	"github.com/creativesoftwarefdn/weaviate/connectors/utils"
 	"github.com/creativesoftwarefdn/weaviate/models"
 )
 
-// ValidateToken validates/gets a key to the Foobar database with the given token (=UUID)
+// ValidateToken validates/gets a key to the Grelmin database with the given token (=UUID)
 func (f *Gremlin) ValidateToken(ctx context.Context, UUID strfmt.UUID, keyResponse *models.KeyGetResponse) (token string, err error) {
 
 	// key (= models.KeyGetResponse) should be populated with the response that comes from the DB.
@@ -30,17 +32,43 @@ func (f *Gremlin) ValidateToken(ctx context.Context, UUID strfmt.UUID, keyRespon
 	// in case the key is not found, return an error like:
 	// return errors_.New("Key not found in database.")
 
-	isRoot := true
+	f._getAll("ValidateToken")
+
+	getKey, err := f.client.Execute(
+		`g.V().hasLabel("key").property("uuid", uuid).property("type", "key")`,
+		map[string]string{"uuid": UUID.String()},
+		map[string]string{},
+	)
+
+	// on process error, fail
+	if reflect.TypeOf(getKey.([]interface{})[0]).String() == "*errors.errorString" {
+		// not returning the error because it is a go routine and the error message will arrive after the fact
+		f.messaging.ErrorMessage("Gremlin [ADD]: " + "[SCRIPT EVALUATION ERROR]")
+	}
+
+	// on error, fail
+	if err != nil {
+		return "", err
+	}
+
+	keyResponse.KeyID = UUID
+	keyResponse.KeyExpiresUnix = int64(f.getSinglePropertyValue(getKey, "keyExpiresUnix", 0).(float64))
+	keyResponse.Write = f.getSinglePropertyValue(getKey, "write", 0).(bool)
+	keyResponse.Email = f.getSinglePropertyValue(getKey, "email", 0).(string)
+	keyResponse.Read = f.getSinglePropertyValue(getKey, "read", 0).(bool)
+	isRoot := f.getSinglePropertyValue(getKey, "isRoot", 0).(bool)
 	keyResponse.IsRoot = &isRoot
-	keyResponse.KeyID = strfmt.UUID(UUID.String())
-	keyResponse.Delete = true
-	keyResponse.Email = "hello@weaviate.com"
-	keyResponse.Execute = true
-	//keyResponse.IPOrigin = "127.0.0.1".([]string)
-	keyResponse.KeyExpiresUnix = -1
-	keyResponse.Read = true
-	keyResponse.Write = true
+	keyResponse.Delete = f.getSinglePropertyValue(getKey, "delete", 0).(bool)
+	keyResponse.Execute = f.getSinglePropertyValue(getKey, "execute", 0).(bool)
+	keyResponse.IPOrigin = strings.Split(f.getSinglePropertyValue(getKey, "IPOrigin", 0).(string), ";")
+
+	// get the token
+	tokenToReturn, err := base64.StdEncoding.DecodeString(f.getSinglePropertyValue(getKey, "__token", 0).(string))
+	if err != nil {
+		return "", err
+	}
 
 	// If success return nil, otherwise return the error
-	return connutils.TokenHasher(UUID), nil
+	return string(tokenToReturn), nil
+
 }
