@@ -29,8 +29,6 @@ import (
 // Thing is already validated against the ontology
 func (f *Gremlin) AddThing(ctx context.Context, thing *models.Thing, UUID strfmt.UUID) error {
 
-	f._getAll("AddThing")
-
 	// convert the thing to a Vertex and and Edge.
 	err := f.thingToGremlin(UUID, thing, "add")
 
@@ -53,8 +51,6 @@ func (f *Gremlin) AddThing(ctx context.Context, thing *models.Thing, UUID strfmt
 
 // GetThing fills the given ThingGetResponse with the values from the database, based on the given UUID.
 func (f *Gremlin) GetThing(ctx context.Context, UUID strfmt.UUID, thingResponse *models.ThingGetResponse) error {
-
-	f._getAll("GetThing")
 
 	// define the ID vertex and the UUID to fetch
 	result, err := f.client.Execute(
@@ -103,6 +99,11 @@ func (f *Gremlin) ListThings(ctx context.Context, first int, offset int, keyID s
 		map[string]string{"objectType": "thing"},
 		map[string]string{},
 	)
+
+	// nothing is found
+	if result.([]interface{})[0] == nil {
+		return nil
+	}
 
 	// Loop over the Gremlin results
 	for thingKey := range result.([]interface{})[0].([]interface{}) {

@@ -50,7 +50,7 @@ const (
 	// StaticActionNotFound message when action is not found
 	StaticActionNotFound string = "Action is not found in database"
 	// StaticKeyNotFound message when key is not found
-	StaticKeyNotFound string = "Key is not found in database"
+	StaticKeyNotFound string = "Provided token is invalid"
 
 	// StaticMissingHeader message
 	StaticMissingHeader string = "Please provide both X-API-KEY and X-API-TOKEN headers."

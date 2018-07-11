@@ -27,18 +27,17 @@ import (
 // ValidateToken validates/gets a key to the Grelmin database with the given token (=UUID)
 func (f *Gremlin) ValidateToken(ctx context.Context, UUID strfmt.UUID, keyResponse *models.KeyGetResponse) (token string, err error) {
 
-	// key (= models.KeyGetResponse) should be populated with the response that comes from the DB.
-
-	// in case the key is not found, return an error like:
-	// return errors_.New("Key not found in database.")
-
-	f._getAll("ValidateToken")
-
+	// find the key
 	getKey, err := f.client.Execute(
-		`g.V().hasLabel("key").property("uuid", uuid).property("type", "key")`,
-		map[string]string{"uuid": UUID.String()},
+		`g.V().hasLabel("key").has("type", "key").has("uuid", "`+UUID.String()+`")`,
+		map[string]string{},
 		map[string]string{},
 	)
+
+	// nothing is found
+	if getKey.([]interface{})[0] == nil {
+		return "", nil
+	}
 
 	// on process error, fail
 	if reflect.TypeOf(getKey.([]interface{})[0]).String() == "*errors.errorString" {
@@ -51,16 +50,19 @@ func (f *Gremlin) ValidateToken(ctx context.Context, UUID strfmt.UUID, keyRespon
 		return "", err
 	}
 
-	keyResponse.KeyID = UUID
+	// set key responses
+	keyResponse.KeyID = strfmt.UUID(f.getSinglePropertyValue(getKey, "uuid", 0).(string))
 	keyResponse.KeyExpiresUnix = int64(f.getSinglePropertyValue(getKey, "keyExpiresUnix", 0).(float64))
 	keyResponse.Write = f.getSinglePropertyValue(getKey, "write", 0).(bool)
 	keyResponse.Email = f.getSinglePropertyValue(getKey, "email", 0).(string)
 	keyResponse.Read = f.getSinglePropertyValue(getKey, "read", 0).(bool)
-	isRoot := f.getSinglePropertyValue(getKey, "isRoot", 0).(bool)
-	keyResponse.IsRoot = &isRoot
 	keyResponse.Delete = f.getSinglePropertyValue(getKey, "delete", 0).(bool)
 	keyResponse.Execute = f.getSinglePropertyValue(getKey, "execute", 0).(bool)
 	keyResponse.IPOrigin = strings.Split(f.getSinglePropertyValue(getKey, "IPOrigin", 0).(string), ";")
+
+	// check if root
+	isRoot := f.getSinglePropertyValue(getKey, "isRoot", 0).(bool)
+	keyResponse.IsRoot = &isRoot
 
 	// get the token
 	tokenToReturn, err := base64.StdEncoding.DecodeString(f.getSinglePropertyValue(getKey, "__token", 0).(string))

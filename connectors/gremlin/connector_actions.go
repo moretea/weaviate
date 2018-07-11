@@ -93,6 +93,11 @@ func (f *Gremlin) ListActions(ctx context.Context, UUID strfmt.UUID, first int, 
 		map[string]string{},
 	)
 
+	// nothing is found
+	if result.([]interface{})[0] == nil {
+		return nil
+	}
+
 	// Loop over the Gremlin results
 	for actionKey := range result.([]interface{})[0].([]interface{}) {
 

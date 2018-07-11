@@ -16,8 +16,6 @@ package gremlin
 import (
 	"context"
 	errors_ "errors"
-	"fmt"
-	"runtime"
 	"strconv"
 
 	"github.com/go-openapi/strfmt"
@@ -66,6 +64,18 @@ type Edges [][]struct {
 	Type       string           `json:"type"`
 }
 
+// Vertices results from Gremlin
+type Vertices [][]struct {
+	ID         int         `json:"id"`
+	InV        int         `json:"inV"`
+	InVLabel   string      `json:"inVLabel"`
+	Label      string      `json:"label"`
+	OutV       int         `json:"outV"`
+	OutVLabel  string      `json:"outVLabel"`
+	Properties interface{} `json:"properties"`
+	Type       string      `json:"type"`
+}
+
 // KeyEdge Struct, returns the Gremlin representation of the Keys
 type KeyEdge struct {
 	ID         int    `json:"id"`
@@ -78,14 +88,6 @@ type KeyEdge struct {
 		KeyUUID strfmt.UUID `json:"keyUUID"`
 	} `json:"properties"`
 	Type string `json:"type"`
-}
-
-func (f *Gremlin) trace() {
-	pc := make([]uintptr, 10) // at least 1 entry needed
-	runtime.Callers(2, pc)
-	f2 := runtime.FuncForPC(pc[0])
-	//file, line := f2.FileLine(pc[0])
-	fmt.Printf("THIS FUNCTION RUNS: %s\n", f2.Name())
 }
 
 // GetName returns a unique connector name, this name is used to define the connector in the weaviate config
@@ -149,6 +151,7 @@ func (f *Gremlin) SetServerAddress(addr string) {
 	f.serverAddress = addr
 }
 
+// Connect connects to the Gremlin websocket
 func (f *Gremlin) Connect() error {
 
 	messaging := &messages.Messaging{}
@@ -177,8 +180,6 @@ func (f *Gremlin) Connect() error {
 // Init 1st initializes the schema in the database and 2nd creates a root key.
 func (f *Gremlin) Init() error {
 
-	f._getAll("Init")
-
 	// Check if there is a root key
 	keyResult, err := f.client.Execute(
 		`g.V().hasLabel("key").has("isRoot", true).has("type", "key").count()`,
@@ -190,9 +191,6 @@ func (f *Gremlin) Init() error {
 	if err != nil {
 		return err
 	}
-
-	fmt.Println("KEY RESULT")
-	fmt.Println(keyResult)
 
 	// check if there is a root key
 	if keyResult.([]interface{})[0].([]interface{})[0].(float64) == 0 {
