@@ -16,7 +16,6 @@ package gremlin
 import (
 	"bytes"
 	"encoding/base64"
-	"fmt"
 	"strconv"
 	"strings"
 
@@ -24,18 +23,25 @@ import (
 )
 
 // keyToGremlin translates a thing struct into a vertex string
-func (f *Gremlin) keyToGremlin(objToHandle *models.Key, token string, UUID string) (string, string) {
+func (f *Gremlin) keyToGremlin(objToHandle *models.Key, token string, UUID string, addOrUpdate string) (string, string) {
 
 	// create vertex and edge buffers
 	var vertex bytes.Buffer
 	var edge bytes.Buffer
 
-	// set general fields
-	vertex.WriteString(`g.addV("key").property("uuid", "` + UUID + `").property("type", "key")`)
+	if addOrUpdate == "add" {
+		// set general fields
+		vertex.WriteString(`g.addV("key").property("uuid", "` + UUID + `").property("type", "key")`)
+	} else if addOrUpdate == "update" {
+		vertex.WriteString(`g.V().hasLabel("key")`)
+		vertex.WriteString(`.has("uuid", "` + UUID + `").has("type", "key")`)
+	} else {
+		f.messaging.ErrorMessage("Trying to add or update a key without `addOrUpdate` set")
+		return "", ""
+	}
 
 	// set boolean properties
 	isRoot := objToHandle.Parent == nil
-
 	vertex.WriteString(`.property("isRoot", ` + strconv.FormatBool(isRoot) + `)`)
 	vertex.WriteString(`.property("delete", ` + strconv.FormatBool(objToHandle.Delete) + `)`)
 	vertex.WriteString(`.property("execute", ` + strconv.FormatBool(objToHandle.Execute) + `)`)
@@ -56,7 +62,7 @@ func (f *Gremlin) keyToGremlin(objToHandle *models.Key, token string, UUID strin
 
 	// if isRoot is false, an edge needs to be added
 	if isRoot == false {
-		fmt.Println(objToHandle.Parent)
+		edge.WriteString(`g.addE("parent").from(g.V().hasLabel("key").has("uuid", "` + UUID + `")).to(g.V().hasLabel("key").has("uuid", "` + objToHandle.Parent.NrDollarCref.String() + `")).property("\$cref", "` + objToHandle.Parent.NrDollarCref.String() + `").property("type", "` + objToHandle.Parent.Type + `").property("locationUrl", "` + *objToHandle.Parent.LocationURL + `")`)
 	}
 
 	return vertex.String(), edge.String()

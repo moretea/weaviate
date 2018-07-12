@@ -45,11 +45,9 @@ func (f *Gremlin) processSingleThing(result interface{}, thingNo int, thingRespo
 
 	// Loop over the Gremlin schema, results
 	for key, value := range result.([]interface{})[0].([]interface{})[thingNo].(map[string]interface{}) {
-		// add schema properties
+		// if a complete schema is submitted
 		if key == "properties" {
-
 			for propKey, propValue := range value.(map[string]interface{}) {
-
 				// check if the key starts with schema__ prefix
 				if strings.HasPrefix(propKey, "schema__") {
 					// Grab the value and valueType of the properties

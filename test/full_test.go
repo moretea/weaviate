@@ -514,7 +514,7 @@ func Test__weaviate_GET_keys_me_JSON_internal_expired(t *testing.T) {
 	require.Equal(t, http.StatusOK, responseNotYetExpired.StatusCode)
 
 	// Wait until key is expired
-	time.Sleep(3 * time.Second)
+	time.Sleep(9 * time.Second)
 
 	// Create get request with key that is expired (same as above)
 	responseExpired := doRequest("/keys/me", "GET", "application/json", nil, expiredKeyID, expiredToken)
@@ -936,40 +936,40 @@ func Test__weaviate_POST_things_JSON_internal(t *testing.T) {
 	require.Equal(t, thingTestDate, respObject.Schema.(map[string]interface{})["testDateTime"].(string))
 }
 
-func Test__weaviate_POST_things_JSON_external(t *testing.T) {
-	// Create create request
-	jsonStr := bytes.NewBuffer([]byte(fmt.Sprintf(`{
-		"@context": "http://example.org",
-		"@class": "TestThing",
-		"schema": {
-			"testString": "%s",
-			"testInt": %d,
-			"testBoolean": %t,
-			"testNumber": %f,
-			"testDateTime": "%s",
-			"testCref": {
-				"$cref": "%s",
-				"locationUrl": "%s",
-				"type": "Thing"
-			}
-		}
-	}`, thingTestString, thingTestInt, thingTestBoolean, thingTestNumber, thingTestDate, thingID, "http://localhost:"+serverPort)))
-	response := doRequest("/things", "POST", "application/json", jsonStr, apiKeyIDCmdLine, apiTokenCmdLine)
+// func Test__weaviate_POST_things_JSON_external(t *testing.T) {
+// 	// Create create request
+// 	jsonStr := bytes.NewBuffer([]byte(fmt.Sprintf(`{
+// 		"@context": "http://example.org",
+// 		"@class": "TestThing",
+// 		"schema": {
+// 			"testString": "%s",
+// 			"testInt": %d,
+// 			"testBoolean": %t,
+// 			"testNumber": %f,
+// 			"testDateTime": "%s",
+// 			"testCref": {
+// 				"$cref": "%s",
+// 				"locationUrl": "%s",
+// 				"type": "Thing"
+// 			}
+// 		}
+// 	}`, thingTestString, thingTestInt, thingTestBoolean, thingTestNumber, thingTestDate, thingID, "http://localhost:"+serverPort)))
+// 	response := doRequest("/things", "POST", "application/json", jsonStr, apiKeyIDCmdLine, apiTokenCmdLine)
 
-	// Check status code of create
-	require.Equal(t, http.StatusAccepted, response.StatusCode)
+// 	// Check status code of create
+// 	require.Equal(t, http.StatusAccepted, response.StatusCode)
 
-	body := getResponseBody(response)
+// 	body := getResponseBody(response)
 
-	respObject := &models.ThingGetResponse{}
-	json.Unmarshal(body, respObject)
+// 	respObject := &models.ThingGetResponse{}
+// 	json.Unmarshal(body, respObject)
 
-	// Check whether generated UUID is added
-	require.Regexp(t, strfmt.UUIDPattern, respObject.ThingID)
+// 	// Check whether generated UUID is added
+// 	require.Regexp(t, strfmt.UUIDPattern, respObject.ThingID)
 
-	// Globally set thingID
-	thingIDExternal = string(respObject.ThingID)
-}
+// 	// Globally set thingID
+// 	thingIDExternal = string(respObject.ThingID)
+// }
 func Test__weaviate_POST_things_JSON_internal_multiple(t *testing.T) {
 	// Add multiple things to the database to check List functions
 	// Fill database with things and set the IDs to the global thingIDs-array
@@ -2133,52 +2133,52 @@ func Test__weaviate_POST_actions_JSON_internal(t *testing.T) {
 	require.Conditionf(t, func() bool { return !(respObject.CreationTimeUnix < now-2000) }, "CreationTimeUnix is incorrect, it was set to far back.")
 }
 
-func Test__weaviate_POST_actions_JSON_external(t *testing.T) {
-	// Create create request
-	jsonStr := bytes.NewBuffer([]byte(fmt.Sprintf(`{
-		"@context": "http://schema.org",
-		"@class": "TestAction",
-		"schema": {
-			"testString": "%s",
-			"testInt": %d,
-			"testBoolean": %t,
-			"testNumber": %f,
-			"testDateTime": "%s",
-			"testCref": {
-				"$cref": "%s",
-				"locationUrl": "%s",
-				"type": "Thing"
-			}
-		},
-		"things": {
-			"object": {
-				"$cref": "%s",
-				"locationUrl": "%s",
-				"type": "Thing"
-			},
-			"subject": {
-				"$cref": "%s",
-				"locationUrl": "%s",
-				"type": "Thing"
-			}
-		}
-	}`, actionTestString, actionTestInt, actionTestBoolean, actionTestNumber, actionTestDate, thingID, "http://localhost:"+serverPort, thingID, "http://localhost:"+serverPort, thingIDsubject, "http://localhost:"+serverPort)))
-	response := doRequest("/actions", "POST", "application/json", jsonStr, apiKeyIDCmdLine, apiTokenCmdLine)
+// func Test__weaviate_POST_actions_JSON_external(t *testing.T) {
+// 	// Create create request
+// 	jsonStr := bytes.NewBuffer([]byte(fmt.Sprintf(`{
+// 		"@context": "http://schema.org",
+// 		"@class": "TestAction",
+// 		"schema": {
+// 			"testString": "%s",
+// 			"testInt": %d,
+// 			"testBoolean": %t,
+// 			"testNumber": %f,
+// 			"testDateTime": "%s",
+// 			"testCref": {
+// 				"$cref": "%s",
+// 				"locationUrl": "%s",
+// 				"type": "Thing"
+// 			}
+// 		},
+// 		"things": {
+// 			"object": {
+// 				"$cref": "%s",
+// 				"locationUrl": "%s",
+// 				"type": "Thing"
+// 			},
+// 			"subject": {
+// 				"$cref": "%s",
+// 				"locationUrl": "%s",
+// 				"type": "Thing"
+// 			}
+// 		}
+// 	}`, actionTestString, actionTestInt, actionTestBoolean, actionTestNumber, actionTestDate, thingID, "http://localhost:"+serverPort, thingID, "http://localhost:"+serverPort, thingIDsubject, "http://localhost:"+serverPort)))
+// 	response := doRequest("/actions", "POST", "application/json", jsonStr, apiKeyIDCmdLine, apiTokenCmdLine)
 
-	// Check status code of create
-	require.Equal(t, http.StatusAccepted, response.StatusCode)
+// 	// Check status code of create
+// 	require.Equal(t, http.StatusAccepted, response.StatusCode)
 
-	body := getResponseBody(response)
+// 	body := getResponseBody(response)
 
-	respObject := &models.ActionGetResponse{}
-	json.Unmarshal(body, respObject)
+// 	respObject := &models.ActionGetResponse{}
+// 	json.Unmarshal(body, respObject)
 
-	// Check whether generated UUID is added
-	require.Regexp(t, strfmt.UUIDPattern, respObject.ActionID)
+// 	// Check whether generated UUID is added
+// 	require.Regexp(t, strfmt.UUIDPattern, respObject.ActionID)
 
-	// Globally set actionID
-	actionIDExternal = string(respObject.ActionID)
-}
+// 	// Globally set actionID
+// 	actionIDExternal = string(respObject.ActionID)
+// }
 
 func Test__weaviate_POST_actions_JSON_internal_multiple(t *testing.T) {
 	// Add multiple actions to the database to check List functions
@@ -2889,35 +2889,35 @@ func Test__weaviate_POST_graphql_JSON_internal_thing_forbidden_parent(t *testing
 	require.NotNil(t, respObject.Errors)
 }
 
-func Test__weaviate_POST_graphql_JSON_thing_external(t *testing.T) {
-	// Set the graphQL body
-	body := `{ thing(uuid:"%s") { uuid schema { testCref { uuid } } } }`
+// func Test__weaviate_POST_graphql_JSON_thing_external(t *testing.T) {
+// 	// Set the graphQL body
+// 	body := `{ thing(uuid:"%s") { uuid schema { testCref { uuid } } } }`
 
-	bodyObj := graphQLQueryObject{
-		Query: fmt.Sprintf(body, thingIDExternal),
-	}
+// 	bodyObj := graphQLQueryObject{
+// 		Query: fmt.Sprintf(body, thingIDExternal),
+// 	}
 
-	// Do the GraphQL request
-	response, respObject := doGraphQLRequest(bodyObj, apiKeyIDCmdLine, apiTokenCmdLine)
+// 	// Do the GraphQL request
+// 	response, respObject := doGraphQLRequest(bodyObj, apiKeyIDCmdLine, apiTokenCmdLine)
 
-	// Check statuscode
-	require.Equal(t, http.StatusOK, response.StatusCode)
+// 	// Check statuscode
+// 	require.Equal(t, http.StatusOK, response.StatusCode)
 
-	// Test that the error in the response is nil
-	require.Nil(t, respObject.Errors)
+// 	// Test that the error in the response is nil
+// 	require.Nil(t, respObject.Errors)
 
-	// Test the given UUID in the response
-	respUUID := respObject.Data["thing"].(map[string]interface{})["uuid"]
-	require.Regexp(t, strfmt.UUIDPattern, respUUID)
-	require.Regexp(t, strfmt.UUIDPattern, thingIDExternal)
-	require.Equal(t, thingIDExternal, respUUID)
+// 	// Test the given UUID in the response
+// 	respUUID := respObject.Data["thing"].(map[string]interface{})["uuid"]
+// 	require.Regexp(t, strfmt.UUIDPattern, respUUID)
+// 	require.Regexp(t, strfmt.UUIDPattern, thingIDExternal)
+// 	require.Equal(t, thingIDExternal, respUUID)
 
-	// Test external uuid
-	externalUUID := respObject.Data["thing"].(map[string]interface{})["schema"].(map[string]interface{})["testCref"].(map[string]interface{})["uuid"].(string)
-	require.Regexp(t, strfmt.UUIDPattern, externalUUID)
-	require.Regexp(t, strfmt.UUIDPattern, thingID)
-	require.Equal(t, thingID, externalUUID)
-}
+// 	// Test external uuid
+// 	externalUUID := respObject.Data["thing"].(map[string]interface{})["schema"].(map[string]interface{})["testCref"].(map[string]interface{})["uuid"].(string)
+// 	require.Regexp(t, strfmt.UUIDPattern, externalUUID)
+// 	require.Regexp(t, strfmt.UUIDPattern, thingID)
+// 	require.Equal(t, thingID, externalUUID)
+// }
 
 func Test__weaviate_POST_graphql_JSON_internal_thing_actions_limit(t *testing.T) {
 	// Set the graphQL body
@@ -3224,46 +3224,46 @@ func Test__weaviate_POST_graphql_JSON_internal_action_forbidden_parent(t *testin
 	// Test that the error in the response is nil
 	require.NotNil(t, respObject.Errors)
 }
-func Test__weaviate_POST_graphql_JSON_action_external(t *testing.T) {
-	// Set the graphQL body
-	body := `{ action(uuid:"%s") { uuid things { object { uuid } subject { uuid } } schema { testCref { uuid } } } }`
-	bodyObj := graphQLQueryObject{
-		Query: fmt.Sprintf(body, actionIDExternal),
-	}
+// func Test__weaviate_POST_graphql_JSON_action_external(t *testing.T) {
+// 	// Set the graphQL body
+// 	body := `{ action(uuid:"%s") { uuid things { object { uuid } subject { uuid } } schema { testCref { uuid } } } }`
+// 	bodyObj := graphQLQueryObject{
+// 		Query: fmt.Sprintf(body, actionIDExternal),
+// 	}
 
-	// Do the GraphQL request
-	response, respObject := doGraphQLRequest(bodyObj, apiKeyIDCmdLine, apiTokenCmdLine)
+// 	// Do the GraphQL request
+// 	response, respObject := doGraphQLRequest(bodyObj, apiKeyIDCmdLine, apiTokenCmdLine)
 
-	// Check statuscode
-	require.Equal(t, http.StatusOK, response.StatusCode)
+// 	// Check statuscode
+// 	require.Equal(t, http.StatusOK, response.StatusCode)
 
-	// Test that the error in the response is nil
-	require.Nil(t, respObject.Errors)
+// 	// Test that the error in the response is nil
+// 	require.Nil(t, respObject.Errors)
 
-	// Test the given UUID in the response
-	respUUID := respObject.Data["action"].(map[string]interface{})["uuid"]
-	require.Regexp(t, strfmt.UUIDPattern, respUUID)
-	require.Regexp(t, strfmt.UUIDPattern, actionIDExternal)
-	require.Equal(t, actionIDExternal, respUUID)
+// 	// Test the given UUID in the response
+// 	respUUID := respObject.Data["action"].(map[string]interface{})["uuid"]
+// 	require.Regexp(t, strfmt.UUIDPattern, respUUID)
+// 	require.Regexp(t, strfmt.UUIDPattern, actionIDExternal)
+// 	require.Equal(t, actionIDExternal, respUUID)
 
-	// Test the given thing-object in the response
-	respObjectUUID := respObject.Data["action"].(map[string]interface{})["things"].(map[string]interface{})["object"].(map[string]interface{})["uuid"]
-	require.Regexp(t, strfmt.UUIDPattern, respObjectUUID)
-	require.Regexp(t, strfmt.UUIDPattern, thingID)
-	require.Equal(t, thingID, respObjectUUID)
+// 	// Test the given thing-object in the response
+// 	respObjectUUID := respObject.Data["action"].(map[string]interface{})["things"].(map[string]interface{})["object"].(map[string]interface{})["uuid"]
+// 	require.Regexp(t, strfmt.UUIDPattern, respObjectUUID)
+// 	require.Regexp(t, strfmt.UUIDPattern, thingID)
+// 	require.Equal(t, thingID, respObjectUUID)
 
-	// Test the given thing-object in the response
-	respSubjectUUID := respObject.Data["action"].(map[string]interface{})["things"].(map[string]interface{})["subject"].(map[string]interface{})["uuid"]
-	require.Regexp(t, strfmt.UUIDPattern, respSubjectUUID)
-	require.Regexp(t, strfmt.UUIDPattern, thingIDsubject)
-	require.Equal(t, thingIDsubject, respSubjectUUID)
+// 	// Test the given thing-object in the response
+// 	respSubjectUUID := respObject.Data["action"].(map[string]interface{})["things"].(map[string]interface{})["subject"].(map[string]interface{})["uuid"]
+// 	require.Regexp(t, strfmt.UUIDPattern, respSubjectUUID)
+// 	require.Regexp(t, strfmt.UUIDPattern, thingIDsubject)
+// 	require.Equal(t, thingIDsubject, respSubjectUUID)
 
-	// Test external uuid
-	externalUUID := respObject.Data["action"].(map[string]interface{})["schema"].(map[string]interface{})["testCref"].(map[string]interface{})["uuid"].(string)
-	require.Regexp(t, strfmt.UUIDPattern, externalUUID)
-	require.Regexp(t, strfmt.UUIDPattern, thingID)
-	require.Equal(t, thingID, externalUUID)
-}
+// 	// Test external uuid
+// 	externalUUID := respObject.Data["action"].(map[string]interface{})["schema"].(map[string]interface{})["testCref"].(map[string]interface{})["uuid"].(string)
+// 	require.Regexp(t, strfmt.UUIDPattern, externalUUID)
+// 	require.Regexp(t, strfmt.UUIDPattern, thingID)
+// 	require.Equal(t, thingID, externalUUID)
+// }
 
 func Test__weaviate_POST_graphql_JSON_internal_key(t *testing.T) {
 	// Set the graphQL body

@@ -41,7 +41,7 @@ func (f *Gremlin) createCrefObject(UUID strfmt.UUID, location string, refType co
 func (f *Gremlin) getSinglePropertyValue(haystack interface{}, needle string, no int) interface{} {
 	// Loop over the Gremlin results
 	for k, v := range haystack.([]interface{})[0].([]interface{})[no].(map[string]interface{}) {
-		// add schema properties
+		// find properties if all properties are selected (i.e., no `.properties(...)` in the Gremlin query)
 		if k == "properties" {
 			// find the property in the schema
 			for propK, propV := range v.(map[string]interface{}) {

@@ -14,13 +14,10 @@
 package gremlin
 
 import (
-	"bytes"
 	"context"
-	"encoding/base64"
 	errors_ "errors"
 	"fmt"
 	"reflect"
-	"strconv"
 	"strings"
 
 	"github.com/go-openapi/strfmt"
@@ -33,16 +30,16 @@ import (
 // token = is the actual access token used in the API's header
 func (f *Gremlin) AddKey(ctx context.Context, key *models.Key, UUID strfmt.UUID, token string) error {
 
-	vertex, _ := f.keyToGremlin(key, token, UUID.String())
+	vertex, edge := f.keyToGremlin(key, token, UUID.String(), "add")
 
-	addResult, err := f.client.Execute(
+	addVertexResult, err := f.client.Execute(
 		vertex,
 		map[string]string{},
 		map[string]string{},
 	)
 
 	// on process error, fail
-	if reflect.TypeOf(addResult.([]interface{})[0]).String() == "*errors.errorString" {
+	if reflect.TypeOf(addVertexResult.([]interface{})[0]).String() == "*errors.errorString" {
 		// not returning the error because it is a go routine and the error message will arrive after the fact
 		f.messaging.ErrorMessage("Gremlin [ADD]: " + "[SCRIPT EVALUATION ERROR]")
 	}
@@ -50,6 +47,26 @@ func (f *Gremlin) AddKey(ctx context.Context, key *models.Key, UUID strfmt.UUID,
 	// on error, fail
 	if err != nil {
 		return err
+	}
+
+	// check if there is a parent
+	if edge != "" {
+		addEdgeResult, err := f.client.Execute(
+			edge,
+			map[string]string{},
+			map[string]string{},
+		)
+
+		// on process error, fail
+		if reflect.TypeOf(addEdgeResult.([]interface{})[0]).String() == "*errors.errorString" {
+			// not returning the error because it is a go routine and the error message will arrive after the fact
+			f.messaging.ErrorMessage("Gremlin [ADD]: " + "[SCRIPT EVALUATION ERROR]")
+		}
+
+		// on error, fail
+		if err != nil {
+			return err
+		}
 	}
 
 	// If success return nil, otherwise return the error
@@ -119,39 +136,67 @@ func (f *Gremlin) DeleteKey(ctx context.Context, key *models.Key, UUID strfmt.UU
 // GetKeyChildren fills the given KeyGetResponse array with the values from the database, based on the given UUID.
 func (f *Gremlin) GetKeyChildren(ctx context.Context, UUID strfmt.UUID, children *[]*models.KeyGetResponse) error {
 
-	// for examle: `children = [OBJECT-A, OBJECT-B, OBJECT-C]`
-	// Where an OBJECT = models.KeyGetResponse
+	// find the edges (if any)
+	getKeys, err := f.client.Execute(
+		`g.V().hasLabel("key").has("type", "key").has("uuid", "`+UUID.String()+`").inE().outV().properties("uuid")`,
+		map[string]string{},
+		map[string]string{},
+	)
 
-	fmt.Println("GETKEY CHILDEREN")
+	// return error on error
+	if err != nil {
+		return err
+	}
 
-	return errors_.New("No key found")
+	// validate if there are any results
+	if reflect.TypeOf(getKeys.([]interface{})[0]) != nil {
+		// loop over the results and add to the child
+		for _, value := range getKeys.([]interface{})[0].([]interface{}) {
+			for propK, propV := range value.(map[string]interface{}) {
+				if propK == "value" {
+					// create empty child struct
+					child := models.KeyGetResponse{}
+					// get the key values
+					f.GetKey(ctx, strfmt.UUID(propV.(string)), &child)
+					// append
+					*children = append(*children, &child)
+				}
+			}
+		}
+	}
+
+	return nil
 }
 
 // UpdateKey updates the Key in the DB at the given UUID.
 func (f *Gremlin) UpdateKey(ctx context.Context, key *models.Key, UUID strfmt.UUID, token string) error {
 
-	// start vertex string Buffer
-	var vertex bytes.Buffer
+	// getting the vertex and the edge
+	vertex, edge := f.keyToGremlin(key, token, UUID.String(), "update")
 
-	// find label and uuid
-	vertex.WriteString(`g.V().hasLabel("key")`)
-	vertex.WriteString(`.has("uuid", "` + UUID.String() + `").has("type", "key")`)
+	// update the key
+	_, err := f.client.Execute(
+		vertex,
+		map[string]string{},
+		map[string]string{},
+	)
 
-	// add bools
-	vertex.WriteString(`.property("delete", "` + strconv.FormatBool(key.Delete) + `")`)
-	vertex.WriteString(`.property("execute", "` + strconv.FormatBool(key.Execute) + `")`)
-	vertex.WriteString(`.property("read", "` + strconv.FormatBool(key.Read) + `")`)
-	vertex.WriteString(`.property("write", "` + strconv.FormatBool(key.Write) + `")`)
+	// return error on error
+	if err != nil {
+		return err
+	}
 
-	// add strings
-	vertex.WriteString(`.property("IPOrigin", "` + strings.Join(key.IPOrigin, ";") + `")`)
-	vertex.WriteString(`.property("email", "` + key.Email + `")`)
+	// update the edge of the key
+	_, err = f.client.Execute(
+		edge,
+		map[string]string{},
+		map[string]string{},
+	)
 
-	// add int
-	vertex.WriteString(`.property("keyExpiresUnix", "` + strconv.FormatInt(key.KeyExpiresUnix, 10) + `")`)
-
-	// add base64 token
-	vertex.WriteString(`.property("__token", "` + base64.StdEncoding.EncodeToString([]byte(token)) + `")`)
+	// return error on error
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
