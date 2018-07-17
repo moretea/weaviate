@@ -24,6 +24,14 @@ ROOTKEY=$(cat nohup.out | grep -s ROOTKEY|sed 's/.*ROOTKEY=//')
 
 # Run the integration tests
 # On error, quit
-set -e
 # Test!
 go test -v ./test -args -api-key=${ROOTKEY} -api-token=${ROOTTOKEN} -server-host=127.0.0.1 -server-port=8080 -server-scheme=http
+exit_status=$?
+
+# Kill all background tasks
+kill -9 $(jobs -p)
+
+# Kill cassandra
+docker rm -f weaviate_db_1_travis
+
+exit $exit_status
