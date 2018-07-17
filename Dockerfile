@@ -11,46 +11,35 @@
 # Contact: @CreativeSofwFdn / bob@kub.design
 ###
 
-# Run on Ubuntu
-FROM ubuntu:16.04
+# Build container
+FROM golang as BUILDER
+RUN go get -u golang.org/x/vgo
+WORKDIR /go/src/github.com/creativefotwarefdn/weaviate
+COPY . .
+RUN  CGO_ENABLED=1 GOOS=linux vgo install -a -ldflags '-extldflags "-static"' ./...
+#RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -tags netgo -ldflags '-w -extldflags "-static"'
+# vgo install ./...
 
-# Set config args
-ARG config_file=./weaviate.conf.json 
-ARG action_schema=./test/schema/test-action-schema.json
-ARG thing_schema=./test/schema/test-thing-schema.json
+# Base image for Weaviate
+FROM alpine
+ENV PATH=$PATH:/opt/weaviate
+RUN mkdir -p /etc/weaviate/
+COPY --from=BUILDER /go/bin/weaviate-server /opt/weaviate/
+COPY --from=BUILDER /go/bin/contextionary-generator /opt/weaviate/
 
-# Set parametrase build args
-ARG release=nightly
-ARG platform=linux
-ARG architecture=amd64
-
-# Crearing the dir of weaviate
-RUN mkdir -p /var/weaviate/config && cd /var/weaviate
-
-# Install needed packages and scripts
-RUN echo "BUILDING ${release}_${platform}_${architecture}.zip"
-
-RUN apt-get -qq update && apt-get -qq install -y jq curl zip wget python-pip && \
-    wget -q -O /var/weaviate/weaviate.zip "https://storage.googleapis.com/weaviate-dist/nightly/weaviate_${release}_${platform}_${architecture}.zip" && \
-    cd /var/weaviate && unzip -o -q -j /var/weaviate/weaviate.zip && \
-    rm /var/weaviate/weaviate.zip && \
-    chmod +x /var/weaviate/weaviate && \
-    pip install --upgrade pip && \
-    pip install cqlsh
-    
-# Expose dgraph ports
-EXPOSE 80
-
-# Copying config files with using args
-COPY $config_file /var/weaviate/$config_file
-COPY $action_schema /var/weaviate/$action_schema
-COPY $thing_schema /var/weaviate/$thing_schema
+COPY ./weaviate.conf.json /etc/weaviate/config.json
+COPY ./test/schema/test-action-schema.json /etc/weaviate/
+COPY ./test/schema/test-thing-schema.json  /etc/weaviate/
 
 # Copy script in container
-COPY ./weaviate-entrypoint.sh /var/weaviate/weaviate-entrypoint.sh
+COPY ./weaviate-entrypoint.sh /weaviate-entrypoint.sh
 
 # Set workdir
 WORKDIR /var/weaviate/
 
-# Run!
-ENTRYPOINT ["./weaviate-entrypoint.sh"]
+ENV WEAVIATE_SCHEME="http" \
+    WEAVIATE_PORT="80" \
+    WEAVIATE_HOST="0.0.0.0" \
+    WEAVIATE_CONFIG="cassandra_docker" 
+
+CMD ["sh", "-c", "/opt/weaviate/weaviate-server --scheme=${WEAVIATE_SCHEME} --port=${WEAVIATE_PORT} --host=${WEAVIATE_HOST} --config-file=/etc/weaviate/config.json --config=${WEAVIATE_CONFIG}"]

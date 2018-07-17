@@ -89,12 +89,12 @@
 			}
 		},
 		"schemas": {
-			"Thing": "./test/schema/test-thing-schema.json",
-			"Action": "./test/schema/test-action-schema.json"
+			"Thing": "/etc/weaviate/test-thing-schema.json",
+			"Action": "/etc/weaviate/test-action-schema.json"
 		},
 		"contextionary": {
-			"knn_file" : "test/contextionary/example.knn",
-			"idx_file" : "test/contextionary/example.idx"
+			"knn_file" : "/var/weaviate/contextionary/example.knn",
+			"idx_file" : "/var/weaviate/contextionary/example.idx"
 		},
 		"broker": {
 			"host": "weaviate-broker",
