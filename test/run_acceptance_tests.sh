@@ -1,3 +1,6 @@
+set -e
+set -m
+
 # Running Cassandra deamon
 docker run -it --name weaviate_db_1_travis -e CASSANDRA_BROADCAST_ADDRESS=127.0.0.1 -p 7000:7000 -p 9042:9042 -d cassandra:3
 sleep 45
