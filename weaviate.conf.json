@@ -1,16 +1,19 @@
 {
 	"environments": [{
-		"name": "cassandra",
+		"name": "janusgraph",
 		"database": {
-			"name": "cassandra",
+			"name": "janusgraph",
 			"database_config": {
 				"host": "127.0.0.1",
-				"port": 7000,
-				"keyspace": "weaviate"
+				"port": 8182
 			}
 		},
 		"cache": {
 			"name": "dataloader"
+		},
+		"contextionary": {
+			"knn_file" : "test/contextionary/example.knn",
+			"idx_file" : "test/contextionary/example.idx"
 		},
 		"schemas": {
 			"Thing": "./test/schema/test-thing-schema.json",
@@ -36,13 +39,12 @@
 			]
 		}
 	}, {
-		"name": "cassandra-P2P",
+		"name": "janusgraph-P2P",
 		"database": {
-			"name": "cassandra",
+			"name": "janusgraph",
 			"database_config": {
 				"host": "127.0.0.1",
-				"port": 7000,
-				"keyspace": "weaviate"
+				"port": 8182
 			}
 		},
 		"cache": {
@@ -79,13 +81,12 @@
 			]
 		}
 	}, {
-		"name": "cassandra_docker",
+		"name": "janusgraph-docker",
 		"database": {
-			"name": "cassandra",
+			"name": "janusgraph",
 			"database_config": {
-				"host": "db",
-				"port": 7000,
-				"keyspace": "weaviate"
+				"host": "127.0.0.1",
+				"port": 8182
 			}
 		},
 		"schemas": {
