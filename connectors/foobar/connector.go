@@ -88,6 +88,11 @@ func (f *Foobar) GetName() string {
 	return "foobar"
 }
 
+// returns the graph request results
+func (f *Foobar) GetGraph(ctx context.Context, request interface{}) (string, error) {
+	return "{}", nil
+}
+
 // SetConfig sets variables, which can be placed in the config file section "database_config: {}"
 // can be custom for any connector, in the example below there is only host and port available.
 //

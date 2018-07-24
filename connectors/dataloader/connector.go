@@ -49,6 +49,11 @@ func (f *DataLoader) GetName() string {
 	return "dataloader"
 }
 
+// returns the graph request results
+func (f *DataLoader) GetGraph(ctx context.Context, request interface{}) (string, error) {
+	return "{}", nil
+}
+
 // Connect function
 func (f *DataLoader) Connect() error {
 	return f.databaseConnector.Connect()

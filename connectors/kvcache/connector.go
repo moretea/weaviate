@@ -46,6 +46,11 @@ func (f *KVCache) GetName() string {
 	return "kv-cache"
 }
 
+// returns the graph request results
+func (f *KVCache) GetGraph(ctx context.Context, request interface{}) (string, error) {
+	return "{}", nil
+}
+
 // Connect function
 func (f *KVCache) Connect() error {
 	return f.databaseConnector.Connect()
