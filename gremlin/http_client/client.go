@@ -1,52 +1,52 @@
 package http_client
 
 import (
-  "fmt"
-  "net/http"
-  "github.com/creativesoftwarefdn/weaviate/gremlin"
-  "github.com/sirupsen/logrus"
+	"fmt"
+	"github.com/creativesoftwarefdn/weaviate/gremlin"
+	"github.com/sirupsen/logrus"
+	"net/http"
 
-  "io/ioutil"
+	"io/ioutil"
 )
 
 type Client struct {
-  endpoint string
-  client http.Client
-  logger *logrus.Logger
+	endpoint string
+	client   http.Client
+	logger   *logrus.Logger
 }
 
 func NewClient(endpoint string) *Client {
-  logger := logrus.New()
-  logger.Out = ioutil.Discard
+	logger := logrus.New()
+	logger.Out = ioutil.Discard
 
-  c := Client {
-    endpoint: endpoint,
-    client: http.Client { },
-    logger: logger,
-  }
+	c := Client{
+		endpoint: endpoint,
+		client:   http.Client{},
+		logger:   logger,
+	}
 
-  return &c
+	return &c
 }
 
 func (c *Client) SetLogger(logger *logrus.Logger) {
-  c.logger = logger
+	c.logger = logger
 }
 
 func (c *Client) Ping() error {
-  q := gremlin.RawQuery("1+41")
-  response, err := c.Execute(q)
-  if err != nil {
-    return err
-  }
+	q := gremlin.RawQuery("1+41")
+	response, err := c.Execute(q)
+	if err != nil {
+		return err
+	}
 
-  i, err := response.OneInt()
-  if err != nil {
-    return err
-  }
+	i, err := response.OneInt()
+	if err != nil {
+		return err
+	}
 
-  if i != 42 {
-    return fmt.Errorf("Could not connnected to Gremlin server. Expected the answer to a test query to be 42', but it was %v", i)
-  }
+	if i != 42 {
+		return fmt.Errorf("Could not connnected to Gremlin server. Expected the answer to a test query to be 42', but it was %v", i)
+	}
 
-  return nil
+	return nil
 }

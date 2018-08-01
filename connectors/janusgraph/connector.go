@@ -14,10 +14,10 @@ import (
 	"github.com/creativesoftwarefdn/weaviate/models"
 	"github.com/creativesoftwarefdn/weaviate/schema"
 
-	"github.com/creativesoftwarefdn/weaviate/gremlin/http_client"
 	"github.com/creativesoftwarefdn/weaviate/gremlin"
+	"github.com/creativesoftwarefdn/weaviate/gremlin/http_client"
 
-  "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 )
 
 // Janusgraph has some basic variables.
@@ -101,36 +101,33 @@ func (f *Janusgraph) SetServerAddress(addr string) {
 	f.serverAddress = addr
 }
 
-// Connect connects to the Janusgraph websocket
-func (f *Janusgraph) Connect() error {
-  f.client = http_client.NewClient(f.config.Url)
-  logger := logrus.New()
-  logger.Level = logrus.DebugLevel
-  f.client.SetLogger(logger)
-
-  err := f.client.Ping(); if err != nil {
-    return fmt.Errorf("Could not connect to Gremlin server; %v", err)
-  }
-
-  f.messaging.InfoMessage("Sucessfully pinged Gremlin server")
-
-	return nil
-}
-
 // Init 1st initializes the schema in the database and 2nd creates a root key.
 func (f *Janusgraph) Init() error {
 	f.messaging.DebugMessage("Initializeing JanusGraph")
 
-  q := gremlin.G.V().HasLabel(KEY_LABEL).HasBool("isRoot", true).Count()
+	err := f.ensureRootKeyExists()
+	if err != nil {
+		return err
+	}
 
-  result, err := f.client.Execute(q)
-  if err != nil { return err }
+	return nil
+}
 
-  i, err := result.OneInt()
-  if err != nil { return err }
+func (j *Janusgraph) ensureRootKeyExists() error {
+	q := gremlin.G.V().HasLabel(KEY_LABEL).HasBool("isRoot", true).Count()
 
-  if i == 0 {
-		f.messaging.InfoMessage("No root key is found, a new one will be generated - RENEW DIRECTLY AFTER RECEIVING THIS MESSAGE")
+	result, err := j.client.Execute(q)
+	if err != nil {
+		return err
+	}
+
+	i, err := result.OneInt()
+	if err != nil {
+		return err
+	}
+
+	if i == 0 {
+		j.messaging.InfoMessage("No root key is found, a new one will be generated - RENEW DIRECTLY AFTER RECEIVING THIS MESSAGE")
 
 		// Create new object and fill it
 		keyObject := models.Key{}
@@ -138,17 +135,32 @@ func (f *Janusgraph) Init() error {
 
 		// Add the root-key to the database
 		ctx := context.Background()
-		err = f.AddKey(ctx, &keyObject, UUID, token)
+		err = j.AddKey(ctx, &keyObject, UUID, token)
 
 		if err != nil {
 			return err
 		}
-
 	} else {
-		f.messaging.InfoMessage("Keys are set and a rootkey is available")
+		j.messaging.InfoMessage("Keys are set and a rootkey is available")
 	}
 
-	// If success return nil, otherwise return the error
+	return nil
+}
+
+// Connect connects to the Janusgraph websocket
+func (f *Janusgraph) Connect() error {
+	f.client = http_client.NewClient(f.config.Url)
+	logger := logrus.New()
+	logger.Level = logrus.DebugLevel
+	f.client.SetLogger(logger)
+
+	err := f.client.Ping()
+	if err != nil {
+		return fmt.Errorf("Could not connect to Gremlin server; %v", err)
+	}
+
+	f.messaging.InfoMessage("Sucessfully pinged Gremlin server")
+
 	return nil
 }
 

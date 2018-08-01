@@ -18,8 +18,8 @@ import (
 
 	"github.com/go-openapi/strfmt"
 
-	"github.com/creativesoftwarefdn/weaviate/models"
 	connutils "github.com/creativesoftwarefdn/weaviate/connectors/utils"
+	"github.com/creativesoftwarefdn/weaviate/models"
 )
 
 func (f *Janusgraph) AddThing(ctx context.Context, thing *models.Thing, UUID strfmt.UUID) error {
