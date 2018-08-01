@@ -1,38 +1,29 @@
-/*                          _       _
- *__      _____  __ ___   ___  __ _| |_ ___
- *\ \ /\ / / _ \/ _` \ \ / / |/ _` | __/ _ \
- * \ V  V /  __/ (_| |\ V /| | (_| | ||  __/
- *  \_/\_/ \___|\__,_| \_/ |_|\__,_|\__\___|
- *
- * Copyright © 2016 - 2018 Weaviate. All rights reserved.
- * LICENSE: https://github.com/creativesoftwarefdn/weaviate/blob/develop/LICENSE.md
- * AUTHOR: Bob van Luijt (bob@kub.design)
- * See www.creativesoftwarefdn.org for details
- * Contact: @CreativeSofwFdn / bob@kub.design
- */
-
 package janusgraph
 
 import (
 	"context"
 	errors_ "errors"
-	"strconv"
 
-	"github.com/go-openapi/strfmt"
+	"fmt"
+
 	"github.com/mitchellh/mapstructure"
-	"github.com/qasaur/gremgo"
 
 	"github.com/creativesoftwarefdn/weaviate/config"
 	"github.com/creativesoftwarefdn/weaviate/connectors/utils"
 	"github.com/creativesoftwarefdn/weaviate/messages"
 	"github.com/creativesoftwarefdn/weaviate/models"
 	"github.com/creativesoftwarefdn/weaviate/schema"
+
+	"github.com/creativesoftwarefdn/weaviate/gremlin/http_client"
+	"github.com/creativesoftwarefdn/weaviate/gremlin"
+
+  "github.com/sirupsen/logrus"
 )
 
 // Janusgraph has some basic variables.
 // This is mandatory, only change it if you need aditional, global variables
 type Janusgraph struct {
-	client *gremgo.Client
+	client *http_client.Client
 	kind   string
 
 	config        Config
@@ -43,51 +34,11 @@ type Janusgraph struct {
 
 // Config represents the config outline for Janusgraph. The Database config shoud be of the following form:
 // "database_config" : {
-//     "host": "127.0.0.1",
-//     "port": 9080
+//     "Url": "http://127.0.0.1:8182"
 // }
 // Notice that the port is the GRPC-port.
 type Config struct {
-	Host string
-	Port int
-}
-
-// Edges results from Janusgraph
-type Edges [][]struct {
-	ID         int              `json:"id"`
-	InV        int              `json:"inV"`
-	InVLabel   string           `json:"inVLabel"`
-	Label      string           `json:"label"`
-	OutV       int              `json:"outV"`
-	OutVLabel  string           `json:"outVLabel"`
-	Properties models.SingleRef `json:"properties"`
-	Type       string           `json:"type"`
-}
-
-// Vertices results from Janusgraph
-type Vertices [][]struct {
-	ID         int         `json:"id"`
-	InV        int         `json:"inV"`
-	InVLabel   string      `json:"inVLabel"`
-	Label      string      `json:"label"`
-	OutV       int         `json:"outV"`
-	OutVLabel  string      `json:"outVLabel"`
-	Properties interface{} `json:"properties"`
-	Type       string      `json:"type"`
-}
-
-// KeyEdge Struct, returns the Janusgraph representation of the Keys
-type KeyEdge struct {
-	ID         int    `json:"id"`
-	InV        int    `json:"inV"`
-	InVLabel   string `json:"inVLabel"`
-	Label      string `json:"label"`
-	OutV       int    `json:"outV"`
-	OutVLabel  string `json:"outVLabel"`
-	Properties struct {
-		KeyUUID strfmt.UUID `json:"keyUUID"`
-	} `json:"properties"`
-	Type string `json:"type"`
+	Url string
 }
 
 // GetName returns a unique connector name, this name is used to define the connector in the weaviate config
@@ -105,8 +56,7 @@ func (f *Janusgraph) GetName() string {
 // 	"database": {
 // 		"name": "janusgraph",
 // 		"database_config" : {
-// 			"host": "127.0.0.1",
-// 			"port": 9080
+// 			"url": "http://127.0.0.1:8081"
 // 		}
 // 	},
 func (f *Janusgraph) SetConfig(configInput *config.Environment) error {
@@ -115,8 +65,8 @@ func (f *Janusgraph) SetConfig(configInput *config.Environment) error {
 	err := mapstructure.Decode(configInput.Database.DatabaseConfig, &f.config)
 
 	// Example to: Validate if the essential  config is available, like host and port.
-	if err != nil || len(f.config.Host) == 0 || f.config.Port == 0 {
-		return errors_.New("could not get Janusgraph host/port from config")
+	if err != nil || len(f.config.Url) == 0 {
+		return errors_.New("could not get Janusgraph url from config")
 	}
 
 	// If success return nil, otherwise return the error (see above)
@@ -153,47 +103,33 @@ func (f *Janusgraph) SetServerAddress(addr string) {
 
 // Connect connects to the Janusgraph websocket
 func (f *Janusgraph) Connect() error {
+  f.client = http_client.NewClient(f.config.Url)
+  logger := logrus.New()
+  logger.Level = logrus.DebugLevel
+  f.client.SetLogger(logger)
 
-	messaging := &messages.Messaging{}
+  err := f.client.Ping(); if err != nil {
+    return fmt.Errorf("Could not connect to Gremlin server; %v", err)
+  }
 
-	// listen for errors
-	errs := make(chan error)
-	go func(chan error) {
-		err := <-errs
-		messaging.ExitError(78, err)
-	}(errs) // Example of connection error handling logic
+  f.messaging.InfoMessage("Sucessfully pinged Gremlin server")
 
-	// dial the websocket
-	dialer := gremgo.NewDialer("ws://" + f.config.Host + ":" + strconv.Itoa(f.config.Port)) // Returns a WebSocket dialer to connect to Janusgraph Server
-	client, err := gremgo.Dial(dialer, errs)                                                // Returns a gremgo client to interact with
-	if err != nil {
-		return err
-	}
-
-	// return the client
-	f.client = &client
-
-	// If success return nil, otherwise return the error (also see above)
 	return nil
 }
 
 // Init 1st initializes the schema in the database and 2nd creates a root key.
 func (f *Janusgraph) Init() error {
+	f.messaging.DebugMessage("Initializeing JanusGraph")
 
-	// Check if there is a root key
-	keyResult, err := f.client.Execute(
-		`g.V().hasLabel("key").has("isRoot", true).has("type", "key").count()`,
-		map[string]string{},
-		map[string]string{},
-	)
+  q := gremlin.G.V().HasLabel(KEY_LABEL).HasBool("isRoot", true).Count()
 
-	// return error
-	if err != nil {
-		return err
-	}
+  result, err := f.client.Execute(q)
+  if err != nil { return err }
 
-	// check if there is a root key
-	if keyResult.([]interface{})[0].([]interface{})[0].(map[string]interface{})["@value"].(float64) == 0 {
+  i, err := result.OneInt()
+  if err != nil { return err }
+
+  if i == 0 {
 		f.messaging.InfoMessage("No root key is found, a new one will be generated - RENEW DIRECTLY AFTER RECEIVING THIS MESSAGE")
 
 		// Create new object and fill it
