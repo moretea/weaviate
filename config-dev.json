@@ -1,6 +1,34 @@
 {
 	"environments": [
     {
+      "name": "janusgraph",
+      "database": {
+        "name": "janusgraph",
+        "database_config": {
+          "url": "http://localhost:8182"
+        }
+      },
+      "contextionary": {
+        "knn_file" : "test/contextionary/example.knn",
+        "idx_file" : "test/contextionary/example.idx"
+      },
+      "schemas": {
+        "Thing": "test/schema/test-thing-schema.json",
+        "Action": "test/schema/test-action-schema.json"
+      },
+      "limit": 100,
+      "debug": true,
+      "development": {
+        "external_instances": [{
+            "url": "http://localhost:8070"
+          },
+          {
+            "url": "http://127.0.0.1:8070"
+          }
+        ]
+      }
+    },
+    {
       "name": "janusgraph-docker",
       "database": {
         "name": "janusgraph",
@@ -9,16 +37,13 @@
           "port": 8182
         }
       },
-      "cache": {
-        "name": "dataloader"
-      },
       "contextionary": {
         "knn_file" : "test/contextionary/example.knn",
         "idx_file" : "test/contextionary/example.idx"
       },
       "schemas": {
-        "Thing": "file://etc/weaviate/schema/thing-schema.json",
-        "Action": "file://etc/weaviate/schema/action-schema.json"
+        "Thing": "/etc/weaviate/schema/thing-schema.json",
+        "Action": "/etc/weaviate/schema/action-schema.json"
       },
       "broker": {
         "host": "localhost",
@@ -28,14 +53,10 @@
       "debug": true,
       "development": {
         "external_instances": [{
-            "url": "http://localhost:8070",
-            "api_key": "a310f32d-0b0b-4b18-9349-8bd986822217",
-            "api_token": "2cc8b504-b429-439e-87d0-d2a17f2bbcf7"
+            "url": "http://localhost:8070"
           },
           {
-            "url": "http://127.0.0.1:8070",
-            "api_key": "a310f32d-0b0b-4b18-9349-8bd986822217",
-            "api_token": "2cc8b504-b429-439e-87d0-d2a17f2bbcf7"
+            "url": "http://127.0.0.1:8070"
           }
         ]
       }

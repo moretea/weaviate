@@ -1,5 +1,9 @@
 package gremlin
 
+import (
+  "strconv"
+)
+
 // A query represents the (partial) query build with the DSL
 type Query struct {
 	query string
@@ -52,12 +56,24 @@ func (q *Query) Int64Property(key string, value int64) *Query {
 	return extend_query(q, `.property("%s", (long) %v)`, escapeString(key), value)
 }
 
+func (q *Query) Float64Property(key string, value float64) *Query {
+	return extend_query(q, `.property("%s", (double) %v)`, escapeString(key), strconv.FormatFloat(value, 'g', -1, 64))
+}
+
 func (q *Query) InE() *Query {
 	return extend_query(q, ".inE()")
 }
 
 func (q *Query) InEWithLabel(label string) *Query {
 	return extend_query(q, `.inE("%s")`, escapeString(label))
+}
+
+func (q *Query) OutE() *Query {
+	return extend_query(q, ".outE()")
+}
+
+func (q *Query) OutEWithLabel(label string) *Query {
+	return extend_query(q, `.outE("%s")`, escapeString(label))
 }
 
 func (q *Query) OutV() *Query {
