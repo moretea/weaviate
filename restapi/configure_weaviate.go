@@ -485,8 +485,8 @@ func configureAPI(api *operations.WeaviateAPI) http.Handler {
 		responseObject.ActionID = UUID
 
 		// broadcast to MQTT
-		mqttJson, _ := json.Marshal(responseObject)
-		weaviateBroker.Publish("/actions/"+string(responseObject.ActionID), string(mqttJson[:]))
+		mqttJSON, _ := json.Marshal(responseObject)
+		weaviateBroker.Publish("/actions/"+string(responseObject.ActionID), string(mqttJSON[:]))
 
 		// Return SUCCESS (NOTE: this is ACCEPTED, so the dbConnector.Add should have a go routine)
 		return actions.NewWeaviateActionUpdateAccepted().WithPayload(responseObject)
@@ -1125,8 +1125,8 @@ func configureAPI(api *operations.WeaviateAPI) http.Handler {
 		responseObject.ThingID = UUID
 
 		// broadcast to MQTT
-		mqttJson, _ := json.Marshal(responseObject)
-		weaviateBroker.Publish("/things/"+string(responseObject.ThingID), string(mqttJson[:]))
+		mqttJSON, _ := json.Marshal(responseObject)
+		weaviateBroker.Publish("/things/"+string(responseObject.ThingID), string(mqttJSON[:]))
 
 		// Return SUCCESS (NOTE: this is ACCEPTED, so the dbConnector.Add should have a go routine)
 		return things.NewWeaviateThingsUpdateAccepted().WithPayload(responseObject)
@@ -1156,25 +1156,24 @@ func configureAPI(api *operations.WeaviateAPI) http.Handler {
 	})
 
 	api.P2PWeaviateP2pGenesisUpdateHandler = p2_p.WeaviateP2pGenesisUpdateHandlerFunc(func(params p2_p.WeaviateP2pGenesisUpdateParams) middleware.Responder {
-		new_peers := make([]libnetwork.Peer, 0)
+		newPeers := make([]libnetwork.Peer, 0)
 
-		for _, genesis_peer := range params.Peers {
+		for _, genesisPeer := range params.Peers {
 			peer := libnetwork.Peer{
-				Id:   genesis_peer.ID,
-				Name: genesis_peer.Name,
-				URI:  genesis_peer.URI,
+				Id:   genesisPeer.ID,
+				Name: genesisPeer.Name,
+				URI:  genesisPeer.URI,
 			}
 
-			new_peers = append(new_peers, peer)
+			newPeers = append(newPeers, peer)
 		}
 
-		err := network.UpdatePeers(new_peers)
+		err := network.UpdatePeers(newPeers)
 
 		if err == nil {
 			return p2_p.NewWeaviateP2pGenesisUpdateOK()
-		} else {
-			return p2_p.NewWeaviateP2pGenesisUpdateInternalServerError()
 		}
+		return p2_p.NewWeaviateP2pGenesisUpdateInternalServerError()
 	})
 
 	api.P2PWeaviateP2pHealthHandler = p2_p.WeaviateP2pHealthHandlerFunc(func(params p2_p.WeaviateP2pHealthParams) middleware.Responder {
@@ -1429,7 +1428,7 @@ func loadContextionary() {
 		messaging.ExitError(78, "Contextionary IDX file not specified")
 	}
 
-	mmaped_contextionary, err := libcontextionary.LoadVectorFromDisk(serverConfig.Environment.Contextionary.KNNFile, serverConfig.Environment.Contextionary.IDXFile)
+	mmapedContextionary, err := libcontextionary.LoadVectorFromDisk(serverConfig.Environment.Contextionary.KNNFile, serverConfig.Environment.Contextionary.IDXFile)
 
 	if err != nil {
 		messaging.ExitError(78, fmt.Sprintf("Could not load Contextionary; %+v", err))
@@ -1438,13 +1437,13 @@ func loadContextionary() {
 	messaging.InfoMessage("Contextionary loaded from disk")
 
 	// Now create the in-memory contextionary based on the classes / properties.
-	in_memory_contextionary, err := databaseSchema.BuildInMemoryContextionaryFromSchema(mmaped_contextionary)
+	inMemoryContextionary, err := databaseSchema.BuildInMemoryContextionaryFromSchema(mmapedContextionary)
 	if err != nil {
 		messaging.ExitError(78, fmt.Sprintf("Could not build in-memory contextionary from schema; %+v", err))
 	}
 
 	// Combine contextionaries
-	contextionaries := []libcontextionary.Contextionary{*in_memory_contextionary, *mmaped_contextionary}
+	contextionaries := []libcontextionary.Contextionary{*inMemoryContextionary, *mmapedContextionary}
 	combined, err := libcontextionary.CombineVectorIndices(contextionaries)
 
 	if err != nil {
@@ -1465,16 +1464,16 @@ func connectToNetwork() {
 		messaging.InfoMessage(fmt.Sprintf("No network configured, not joining one"))
 		network = libnetwork.FakeNetwork{}
 	} else {
-		genesis_url := strfmt.URI(serverConfig.Environment.Network.GenesisURL)
-		public_url := strfmt.URI(serverConfig.Environment.Network.PublicURL)
-		peer_name := serverConfig.Environment.Network.PeerName
+		genesisURL := strfmt.URI(serverConfig.Environment.Network.GenesisURL)
+		publicURL := strfmt.URI(serverConfig.Environment.Network.PublicURL)
+		peerName := serverConfig.Environment.Network.PeerName
 
-		messaging.InfoMessage(fmt.Sprintf("Network configured, connecting to Genesis '%v'", genesis_url))
-		new_net, err := libnetwork.BootstrapNetwork(messaging, genesis_url, public_url, peer_name)
+		messaging.InfoMessage(fmt.Sprintf("Network configured, connecting to Genesis '%v'", genesisURL))
+		newNet, err := libnetwork.BootstrapNetwork(messaging, genesisURL, publicURL, peerName)
 		if err != nil {
 			messaging.ExitError(78, fmt.Sprintf("Could not connect to network! Reason: %+v", err))
 		} else {
-			network = *new_net
+			network = *newNet
 		}
 	}
 }

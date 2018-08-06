@@ -19,11 +19,8 @@ import (
 	"time"
 
 	"github.com/go-openapi/strfmt"
-	"gopkg.in/nicksrandall/dataloader.v5"
 
 	"github.com/creativesoftwarefdn/weaviate/config"
-	"github.com/creativesoftwarefdn/weaviate/connectors"
-	"github.com/creativesoftwarefdn/weaviate/connectors/utils"
 	"github.com/creativesoftwarefdn/weaviate/messages"
 	"github.com/creativesoftwarefdn/weaviate/models"
 	"github.com/creativesoftwarefdn/weaviate/schema"
@@ -80,7 +77,7 @@ func (f *DataLoader) Attach(ctx context.Context) (context.Context, error) {
 
 		// Append a to the result the list of keys with all errors
 		if err != nil {
-			for _ = range keys {
+			for range keys {
 				results = append(results, &dataloader.Result{Error: err})
 			}
 			return results
@@ -125,7 +122,7 @@ func (f *DataLoader) Attach(ctx context.Context) (context.Context, error) {
 
 		// Append a to the result the list of keys with all errors
 		if err != nil {
-			for _ = range keys {
+			for range keys {
 				results = append(results, &dataloader.Result{Error: err})
 			}
 			return results
@@ -170,7 +167,7 @@ func (f *DataLoader) Attach(ctx context.Context) (context.Context, error) {
 
 		// Append a to the result the list of keys with all errors
 		if err != nil {
-			for _ = range keys {
+			for range keys {
 				results = append(results, &dataloader.Result{Error: err})
 			}
 			return results
@@ -202,7 +199,7 @@ func (f *DataLoader) Attach(ctx context.Context) (context.Context, error) {
 		dataloader.WithWait(50*time.Millisecond),
 		dataloader.WithBatchCapacity(100),
 	)
-	ctx = context.WithValue(ctx, thingsDataLoader, thingsLoader)
+	ctx = context.WithValue(ctx, thingsDataLoader.(int), thingsLoader)
 
 	// create Loader with an in-memory cache
 	actionsLoader := dataloader.NewBatchedLoader(
@@ -210,7 +207,7 @@ func (f *DataLoader) Attach(ctx context.Context) (context.Context, error) {
 		dataloader.WithWait(50*time.Millisecond),
 		dataloader.WithBatchCapacity(100),
 	)
-	ctx = context.WithValue(ctx, actionsDataLoader, actionsLoader)
+	ctx = context.WithValue(ctx, actionsDataLoader.(int), actionsLoader)
 
 	// create Loader with an in-memory cache
 	keysLoader := dataloader.NewBatchedLoader(
@@ -218,7 +215,8 @@ func (f *DataLoader) Attach(ctx context.Context) (context.Context, error) {
 		dataloader.WithWait(50*time.Millisecond),
 		dataloader.WithBatchCapacity(100),
 	)
-	ctx = context.WithValue(ctx, keysDataLoader, keysLoader)
+
+	ctx = context.WithValue(ctx, keyPrincipalID.(int), keysLoader)
 
 	return f.databaseConnector.Attach(ctx)
 }

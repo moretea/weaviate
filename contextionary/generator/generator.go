@@ -1,4 +1,15 @@
-package generator
+/*                          _       _
+ *__      _____  __ ___   ___  __ _| |_ ___
+ *\ \ /\ / / _ \/ _` \ \ / / |/ _` | __/ _ \
+ * \ V  V /  __/ (_| |\ V /| | (_| | ||  __/
+ *  \_/\_/ \___|\__,_| \_/ |_|\__,_|\__\___|
+ *
+ * Copyright © 2016 - 2018 Weaviate. All rights reserved.
+ * LICENSE: https://github.com/creativesoftwarefdn/weaviate/blob/develop/LICENSE.md
+ * AUTHOR: Bob van Luijt (bob@kub.design)
+ * See www.creativesoftwarefdn.org for details
+ * Contact: @CreativeSofwFdn / bob@kub.design
+ */package generator
 
 import (
 	"bufio"
@@ -6,14 +17,16 @@ import (
 	"encoding/binary"
 	"encoding/gob"
 	"encoding/json"
-	annoy "github.com/creativesoftwarefdn/weaviate/contextionary/annoyindex"
-	"github.com/syndtr/goleveldb/leveldb"
 	"log"
 	"os"
 	"strconv"
 	"strings"
+
+	annoy "github.com/creativesoftwarefdn/weaviate/contextionary/annoyindex"
+	"github.com/syndtr/goleveldb/leveldb"
 )
 
+// Options contains the vector options like paths and db paths
 type Options struct {
 	VectorCSVPath string `short:"c" long:"vector-csv-path" description:"Path to the output file of Glove" required:"true"`
 	TempDBPath    string `short:"t" long:"temp-db-path" description:"Location for the temporary database" default:".tmp_import"`
@@ -21,17 +34,20 @@ type Options struct {
 	K             int    `short:"k" description:"number of forrests to generate" default:"20"`
 }
 
+// WordVectorInfo contains general information about the word vector
 type WordVectorInfo struct {
 	numberOfWords int
 	vectorWidth   int
 	k             int
-	metadata      JsonMetadata
+	metadata      JSONMetadata
 }
 
-type JsonMetadata struct {
+// JSONMetadata contains general metadata
+type JSONMetadata struct {
 	K int `json:"k"` // the number of parallel forrests.
 }
 
+// Generate generates demo contextionary files
 func Generate(options Options) {
 	db, err := leveldb.OpenFile(options.TempDBPath, nil)
 	defer db.Close()
@@ -50,7 +66,7 @@ func Generate(options Options) {
 	info := readVectorsFromFileAndInsertIntoLevelDB(db, file)
 
 	info.k = options.K
-	info.metadata = JsonMetadata{options.K}
+	info.metadata = JSONMetadata{options.K}
 
 	log.Print("Generating wordlist")
 	createWordList(db, info, options.OutputPrefix+".idx")
@@ -64,28 +80,28 @@ func Generate(options Options) {
 
 // read word vectors, insert them into level db, also return the dimension of the vectors.
 func readVectorsFromFileAndInsertIntoLevelDB(db *leveldb.DB, file *os.File) WordVectorInfo {
-	var vector_length int = -1
-	var nr_words int = 0
+	vectorLength := -1
+	var nrWords int
 
 	scanner := bufio.NewScanner(file)
 
 	for scanner.Scan() {
-		nr_words += 1
+		nrWords++
 		parts := strings.Split(scanner.Text(), " ")
 
 		word := parts[0]
-		if vector_length == -1 {
-			vector_length = len(parts) - 1
+		if vectorLength == -1 {
+			vectorLength = len(parts) - 1
 		}
 
-		if vector_length != len(parts)-1 {
+		if vectorLength != len(parts)-1 {
 			log.Fatal("Data corruption; not all words have the same vector length")
 		}
 
 		// pre-allocate a vector for speed.
-		vector := make([]float32, vector_length)
+		vector := make([]float32, vectorLength)
 
-		for i := 1; i <= vector_length; i++ {
+		for i := 1; i <= vectorLength; i++ {
 			float, err := strconv.ParseFloat(parts[i], 64)
 
 			if err != nil {
@@ -103,7 +119,7 @@ func readVectorsFromFileAndInsertIntoLevelDB(db *leveldb.DB, file *os.File) Word
 		db.Put([]byte(word), buf.Bytes(), nil)
 	}
 
-	return WordVectorInfo{numberOfWords: nr_words, vectorWidth: vector_length}
+	return WordVectorInfo{numberOfWords: nrWords, vectorWidth: vectorLength}
 }
 
 func createWordList(db *leveldb.DB, info WordVectorInfo, outputFileName string) {
@@ -141,16 +157,16 @@ func createWordList(db *leveldb.DB, info WordVectorInfo, outputFileName string) 
 		log.Fatal("Could not write the metadata")
 	}
 
-	var metadata_len = uint64(len(metadata))
-	var metadata_padding = 4 - (metadata_len % 4)
-	for i := 0; uint64(i) < metadata_padding; i++ {
+	var metadataLen = uint64(len(metadata))
+	var metadataPadding = 4 - (metadataLen % 4)
+	for i := 0; uint64(i) < metadataPadding; i++ {
 		wbuf.WriteByte(byte(0))
 	}
 
-	var word_offset uint64 = (2 + uint64(info.numberOfWords)) * 8 // first two uint64's from the header, then the table of indices.
-	word_offset += 8 + metadata_len + metadata_padding            // and the metadata length + content & padding
+	wordOffset := (2 + uint64(info.numberOfWords)) * 8 // first two uint64's from the header, then the table of indices.
+	wordOffset += 8 + metadataLen + metadataPadding    // and the metadata length + content & padding
 
-	var orig_word_offset = word_offset
+	var origWordOffset = wordOffset
 
 	// Iterate first time over all data, computing indices for all words.
 	iter := db.NewIterator(nil, nil)
@@ -158,21 +174,21 @@ func createWordList(db *leveldb.DB, info WordVectorInfo, outputFileName string) 
 		key := iter.Key()
 		word := string(key)
 		length := len(word)
-		err = binary.Write(wbuf, binary.LittleEndian, uint64(word_offset))
+		err = binary.Write(wbuf, binary.LittleEndian, uint64(wordOffset))
 
 		if err != nil {
 			log.Fatal("Could not write word offset to wordlist")
 		}
 
-		word_offset += uint64(length) + 1
+		wordOffset += uint64(length) + 1
 
 		// ensure padding on 4-bytes aligned memory
-		padding := 4 - (word_offset % 4)
-		word_offset += padding
+		padding := 4 - (wordOffset % 4)
+		wordOffset += padding
 	}
 
 	iter.Release()
-	word_offset = orig_word_offset
+	wordOffset = origWordOffset
 
 	// Iterate second time over all data, now inserting the words
 	iter = db.NewIterator(nil, nil)
@@ -182,15 +198,15 @@ func createWordList(db *leveldb.DB, info WordVectorInfo, outputFileName string) 
 		length := len(word)
 		wbuf.Write([]byte(word))
 		wbuf.WriteByte(byte(0))
-		word_offset += uint64(length) + 1
+		wordOffset += uint64(length) + 1
 
 		// ensure padding on 4-bytes aligned memory
-		padding := 4 - (word_offset % 4)
+		padding := 4 - (wordOffset % 4)
 		for i := 0; uint64(i) < padding; i++ {
 			wbuf.WriteByte(byte(0))
 		}
 
-		word_offset += padding
+		wordOffset += padding
 	}
 	wbuf.Flush()
 	iter.Release()
@@ -198,12 +214,12 @@ func createWordList(db *leveldb.DB, info WordVectorInfo, outputFileName string) 
 
 func createKnn(db *leveldb.DB, info WordVectorInfo, outputFileName string) {
 	var knn annoy.AnnoyIndex = annoy.NewAnnoyIndexEuclidean(info.vectorWidth)
-	var idx int = -1
+	idx := -1
 
 	iter := db.NewIterator(nil, nil)
 
 	for iter.Next() {
-		idx += 1
+		idx++
 
 		vector := make([]float32, info.vectorWidth)
 		err := gob.NewDecoder(bytes.NewBuffer(iter.Value())).Decode(&vector)

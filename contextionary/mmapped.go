@@ -1,72 +1,82 @@
+/*                          _       _
+ *__      _____  __ ___   ___  __ _| |_ ___
+ *\ \ /\ / / _ \/ _` \ \ / / |/ _` | __/ _ \
+ * \ V  V /  __/ (_| |\ V /| | (_| | ||  __/
+ *  \_/\_/ \___|\__,_| \_/ |_|\__,_|\__\___|
+ *
+ * Copyright © 2016 - 2018 Weaviate. All rights reserved.
+ * LICENSE: https://github.com/creativesoftwarefdn/weaviate/blob/develop/LICENSE.md
+ * AUTHOR: Bob van Luijt (bob@kub.design)
+ * See www.creativesoftwarefdn.org for details
+ * Contact: @CreativeSofwFdn / bob@kub.design
+ */
+
 package contextionary
 
 import (
 	"fmt"
+
 	annoy "github.com/creativesoftwarefdn/weaviate/contextionary/annoyindex"
 )
 
 type mmappedIndex struct {
-	word_index *Wordlist
-	knn        annoy.AnnoyIndex
+	wordIndex *Wordlist
+	knn       annoy.AnnoyIndex
 }
 
 func (m *mmappedIndex) GetNumberOfItems() int {
-	return int(m.word_index.numberOfWords)
+	return int(m.wordIndex.numberOfWords)
 }
 
 // Returns the length of the used vectors.
 func (m *mmappedIndex) GetVectorLength() int {
-	return int(m.word_index.vectorWidth)
+	return int(m.wordIndex.vectorWidth)
 }
 
 func (m *mmappedIndex) WordToItemIndex(word string) ItemIndex {
-	return m.word_index.FindIndexByWord(word)
+	return m.wordIndex.FindIndexByWord(word)
 }
 
 func (m *mmappedIndex) ItemIndexToWord(item ItemIndex) (string, error) {
-	if item >= 0 && item <= m.word_index.GetNumberOfWords() {
-		return m.word_index.getWord(item), nil
-	} else {
-		return "", fmt.Errorf("Index out of bounds")
+	if item >= 0 && item <= m.wordIndex.GetNumberOfWords() {
+		return m.wordIndex.getWord(item), nil
 	}
+	return "", fmt.Errorf("index out of bounds")
 }
 
 func (m *mmappedIndex) GetVectorForItemIndex(item ItemIndex) (*Vector, error) {
-	if item >= 0 && item <= m.word_index.GetNumberOfWords() {
+	if item >= 0 && item <= m.wordIndex.GetNumberOfWords() {
 		var floats []float32
 		m.knn.GetItem(int(item), &floats)
 
 		return &Vector{floats}, nil
-	} else {
-		return nil, fmt.Errorf("Index out of bounds")
 	}
+	return nil, fmt.Errorf("index out of bounds")
 }
 
 // Compute the distance between two items.
 func (m *mmappedIndex) GetDistance(a ItemIndex, b ItemIndex) (float32, error) {
-	if a >= 0 && b >= 0 && a <= m.word_index.GetNumberOfWords() && b <= m.word_index.GetNumberOfWords() {
+	if a >= 0 && b >= 0 && a <= m.wordIndex.GetNumberOfWords() && b <= m.wordIndex.GetNumberOfWords() {
 		return m.knn.GetDistance(int(a), int(b)), nil
-	} else {
-		return 0, fmt.Errorf("Index out of bounds")
 	}
+	return 0, fmt.Errorf("index out of bounds")
 }
 
 func (m *mmappedIndex) GetNnsByItem(item ItemIndex, n int, k int) ([]ItemIndex, []float32, error) {
-	if item >= 0 && item <= m.word_index.GetNumberOfWords() {
+	if item >= 0 && item <= m.wordIndex.GetNumberOfWords() {
 		var items []int
 		var distances []float32
 
 		m.knn.GetNnsByItem(int(item), n, k, &items, &distances)
 
-		var indices []ItemIndex = make([]ItemIndex, len(items))
+		indices := make([]ItemIndex, len(items))
 		for i, x := range items {
 			indices[i] = ItemIndex(x)
 		}
 
 		return indices, distances, nil
-	} else {
-		return nil, nil, fmt.Errorf("Index out of bounds")
 	}
+	return nil, nil, fmt.Errorf("index out of bounds")
 }
 
 func (m *mmappedIndex) GetNnsByVector(vector Vector, n int, k int) ([]ItemIndex, []float32, error) {
@@ -76,31 +86,31 @@ func (m *mmappedIndex) GetNnsByVector(vector Vector, n int, k int) ([]ItemIndex,
 
 		m.knn.GetNnsByVector(vector.vector, n, k, &items, &distances)
 
-		var indices []ItemIndex = make([]ItemIndex, len(items))
+		indices := make([]ItemIndex, len(items))
 		for i, x := range items {
 			indices[i] = ItemIndex(x)
 		}
 
 		return indices, distances, nil
-	} else {
-		return nil, nil, fmt.Errorf("Wrong vector length provided")
 	}
+	return nil, nil, fmt.Errorf("wrong vector length provided")
 }
 
-func LoadVectorFromDisk(annoy_index string, word_index_file_name string) (*Contextionary, error) {
-	word_index, err := LoadWordlist(word_index_file_name)
+// LoadVectorFromDisk loads the vector file from disk
+func LoadVectorFromDisk(annoyIndex string, wordIndexFileName string) (*Contextionary, error) {
+	wordIndex, err := LoadWordlist(wordIndexFileName)
 
 	if err != nil {
-		return nil, fmt.Errorf("Could not load vector: %+v", err)
+		return nil, fmt.Errorf("could not load vector: %+v", err)
 	}
 
-	knn := annoy.NewAnnoyIndexEuclidean(int(word_index.vectorWidth))
-	knn.Load(annoy_index)
+	knn := annoy.NewAnnoyIndexEuclidean(int(wordIndex.vectorWidth))
+	knn.Load(annoyIndex)
 
-	var idx *mmappedIndex = new(mmappedIndex)
-	idx.word_index = word_index
+	idx := new(mmappedIndex)
+	idx.wordIndex = wordIndex
 	idx.knn = knn
 
-	var blah Contextionary = Contextionary(idx)
-	return &blah, nil
+	contextionary := Contextionary(idx)
+	return &contextionary, nil
 }

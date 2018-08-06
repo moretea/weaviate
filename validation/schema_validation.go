@@ -17,8 +17,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/go-openapi/strfmt"
 	"time"
+
+	"github.com/go-openapi/strfmt"
 
 	"github.com/creativesoftwarefdn/weaviate/config"
 	"github.com/creativesoftwarefdn/weaviate/connectors"

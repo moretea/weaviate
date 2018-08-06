@@ -1,3 +1,16 @@
+/*                          _       _
+ *__      _____  __ ___   ___  __ _| |_ ___
+ *\ \ /\ / / _ \/ _` \ \ / / |/ _` | __/ _ \
+ * \ V  V /  __/ (_| |\ V /| | (_| | ||  __/
+ *  \_/\_/ \___|\__,_| \_/ |_|\__,_|\__\___|
+ *
+ * Copyright © 2016 - 2018 Weaviate. All rights reserved.
+ * LICENSE: https://github.com/creativesoftwarefdn/weaviate/blob/develop/LICENSE.md
+ * AUTHOR: Bob van Luijt (bob@kub.design)
+ * See www.creativesoftwarefdn.org for details
+ * Contact: @CreativeSofwFdn / bob@kub.design
+ */
+
 package restapi
 
 import (
@@ -48,9 +61,8 @@ func configureAPI(api *operations.WeaviateGenesisAPI) http.Handler {
 
 		if err == nil {
 			return operations.NewGenesisPeersLeaveNoContent()
-		} else {
-			return operations.NewGenesisPeersLeaveNotFound()
 		}
+		return operations.NewGenesisPeersLeaveNotFound()
 	})
 
 	api.GenesisPeersPingHandler = operations.GenesisPeersPingHandlerFunc(func(params operations.GenesisPeersPingParams) middleware.Responder {
@@ -58,21 +70,18 @@ func configureAPI(api *operations.WeaviateGenesisAPI) http.Handler {
 
 		if err == nil {
 			return operations.NewGenesisPeersPingOK()
-		} else {
-			return operations.NewGenesisPeersPingNotFound()
 		}
+		return operations.NewGenesisPeersPingNotFound()
 	})
 
 	api.GenesisPeersRegisterHandler = operations.GenesisPeersRegisterHandlerFunc(func(params operations.GenesisPeersRegisterParams) middleware.Responder {
 		//TODO: perform ping action on weaviate
-		var err error = nil
+		var err error
 
 		if err == nil {
 			peer, err := (state).RegisterPeer(params.Body.PeerName, params.Body.PeerURI)
-			if err != nil {
-				return operations.NewGenesisPeersRegisterForbidden()
-			} else {
-				response_peer := models.Peer{
+			if err == nil {
+				responsePeer := models.Peer{
 					PeerUpdate: models.PeerUpdate{
 						PeerURI:  peer.URI(),
 						PeerName: peer.Name(),
@@ -81,40 +90,40 @@ func configureAPI(api *operations.WeaviateGenesisAPI) http.Handler {
 					LastContactAt: peer.LastContactAt.Unix(),
 				}
 				payload := models.PeerRegistrationResponse{
-					Peer: &response_peer,
+					Peer: &responsePeer,
 				}
 				return operations.NewGenesisPeersRegisterOK().WithPayload(&payload)
 			}
-		} else {
-			return operations.NewGenesisPeersRegisterBadRequest()
+			return operations.NewGenesisPeersRegisterForbidden()
 		}
+		return operations.NewGenesisPeersRegisterBadRequest()
 	})
 
 	api.GenesisPeersListHandler = operations.GenesisPeersListHandlerFunc(func(params operations.GenesisPeersListParams) middleware.Responder {
 		peers := make([]*models.Peer, 0)
 
-		listed_peers, err := (state).ListPeers()
-		if err != nil {
+		listedPeers, err := (state).ListPeers()
+		if err == nil {
 			log.Infof("Failed to list peers, because %+v", err)
 			return operations.NewGenesisPeersListInternalServerError()
-		} else {
-			for _, peer := range listed_peers {
-				p := models.Peer{
-					PeerUpdate: models.PeerUpdate{
-						PeerURI:  peer.URI(),
-						PeerName: peer.Name(),
-					},
-					ID:            peer.Id,
-					LastContactAt: peer.LastContactAt.Unix(),
-				}
-
-				peers = append(peers, &p)
+		}
+		for _, peer := range listedPeers {
+			p := models.Peer{
+				PeerUpdate: models.PeerUpdate{
+					PeerURI:  peer.URI(),
+					PeerName: peer.Name(),
+				},
+				ID:            peer.Id,
+				LastContactAt: peer.LastContactAt.Unix(),
 			}
 
-			reply := operations.NewGenesisPeersListOK()
-			reply.SetPayload(peers)
-			return reply
+			peers = append(peers, &p)
 		}
+
+		reply := operations.NewGenesisPeersListOK()
+		reply.SetPayload(peers)
+		return reply
+
 	})
 
 	api.ServerShutdown = func() {}

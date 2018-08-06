@@ -1,3 +1,16 @@
+/*                          _       _
+ *__      _____  __ ___   ___  __ _| |_ ___
+ *\ \ /\ / / _ \/ _` \ \ / / |/ _` | __/ _ \
+ * \ V  V /  __/ (_| |\ V /| | (_| | ||  __/
+ *  \_/\_/ \___|\__,_| \_/ |_|\__,_|\__\___|
+ *
+ * Copyright © 2016 - 2018 Weaviate. All rights reserved.
+ * LICENSE: https://github.com/creativesoftwarefdn/weaviate/blob/develop/LICENSE.md
+ * AUTHOR: Bob van Luijt (bob@kub.design)
+ * See www.creativesoftwarefdn.org for details
+ * Contact: @CreativeSofwFdn / bob@kub.design
+ */
+
 package contextionary
 
 import (
@@ -5,10 +18,11 @@ import (
 	"sort"
 )
 
+// CombinedIndex combines the indeces and the vectors
 type CombinedIndex struct {
-	indices       []combinedIndex
-	total_size    int
-	vector_length int
+	indices      []combinedIndex
+	totalSize    int
+	vectorLength int
 }
 
 type combinedIndex struct {
@@ -17,7 +31,7 @@ type combinedIndex struct {
 	index  *Contextionary
 }
 
-// Combine multiple indices, present them as one.
+// CombineVectorIndices combines multiple indices, present them as one.
 // It assumes that each index stores unique words
 func CombineVectorIndices(indices []Contextionary) (*CombinedIndex, error) {
 	// We join the ItemIndex spaces the indivual indices, by
@@ -25,19 +39,19 @@ func CombineVectorIndices(indices []Contextionary) (*CombinedIndex, error) {
 	// the 3rd ItemIndex space with len(indices[0]) + len(indices[1]), etc.
 
 	if len(indices) < 2 {
-		return nil, fmt.Errorf("Less than two vector indices provided!")
+		return nil, fmt.Errorf("less than two vector indices provided")
 	}
 
-	combined_indices := make([]combinedIndex, len(indices))
+	combinedIndices := make([]combinedIndex, len(indices))
 
-	var offset int = 0
+	var offset int
 
-	vector_length := indices[0].GetVectorLength()
+	vectorLength := indices[0].GetVectorLength()
 
 	for i := 0; i < len(indices); i++ {
 		size := indices[i].GetNumberOfItems()
 
-		combined_indices[i] = combinedIndex{
+		combinedIndices[i] = combinedIndex{
 			offset: offset,
 			size:   size,
 			index:  &indices[i],
@@ -45,31 +59,31 @@ func CombineVectorIndices(indices []Contextionary) (*CombinedIndex, error) {
 
 		offset += size
 
-		my_length := indices[i].GetVectorLength()
+		myLength := indices[i].GetVectorLength()
 
-		if my_length != vector_length {
+		if myLength != vectorLength {
 			return nil, fmt.Errorf("vector length not equal")
 		}
 	}
 
-	return &CombinedIndex{indices: combined_indices, total_size: offset, vector_length: vector_length}, nil
+	return &CombinedIndex{indices: combinedIndices, totalSize: offset, vectorLength: vectorLength}, nil
 }
 
-// Verify that all the indices are disjoint
+// VerifyDisjoint verifies that all the indices are disjoint
 // Returns nil on success, an error if the words in the indices are not disjoint.
 func (ci *CombinedIndex) VerifyDisjoint() error {
-	for index_i, item_i := range ci.indices {
-		for i := ItemIndex(0); int(i) < item_i.size; i++ {
-			word, err := (*item_i.index).ItemIndexToWord(i)
+	for indexI, itemI := range ci.indices {
+		for i := ItemIndex(0); int(i) < itemI.size; i++ {
+			word, err := (*itemI.index).ItemIndexToWord(i)
 			if err != nil {
 				panic("should not happen; this index should always be accessible")
 			}
 
-			for index_j, item_j := range ci.indices {
-				if index_i != index_j {
-					result := (*(item_j.index)).WordToItemIndex(word)
+			for indexJ, itemJ := range ci.indices {
+				if indexI != indexJ {
+					result := (*(itemJ.index)).WordToItemIndex(word)
 					if result.IsPresent() {
-						return fmt.Errorf("Word %v is in more than one index.", word)
+						return fmt.Errorf("word %v is in more than one index", word)
 					}
 				}
 			}
@@ -79,28 +93,31 @@ func (ci *CombinedIndex) VerifyDisjoint() error {
 	return nil
 }
 
+// GetNumberOfItems counts the amount of numbers
 func (ci *CombinedIndex) GetNumberOfItems() int {
-	return ci.total_size
+	return ci.totalSize
 }
 
+// GetVectorLength returns the length of a vector
 func (ci *CombinedIndex) GetVectorLength() int {
-	return ci.vector_length
+	return ci.vectorLength
 }
 
+// WordToItemIndex returns the index based in a word
 func (ci *CombinedIndex) WordToItemIndex(word string) ItemIndex {
 	for _, item := range ci.indices {
-		item_index := (*item.index).WordToItemIndex(word)
+		itemIndex := (*item.index).WordToItemIndex(word)
 
-		if (&item_index).IsPresent() {
-			return item_index + ItemIndex(item.offset)
+		if (&itemIndex).IsPresent() {
+			return itemIndex + ItemIndex(item.offset)
 		}
 	}
 
 	return -1
 }
 
-func (ci *CombinedIndex) find_vector_index_for_item_index(item_index ItemIndex) (ItemIndex, *Contextionary, error) {
-	item := int(item_index)
+func (ci *CombinedIndex) findVectorIndexForItemIndex(itemIndex ItemIndex) (ItemIndex, *Contextionary, error) {
+	item := int(itemIndex)
 
 	for _, idx := range ci.indices {
 		if item >= idx.offset && item < (idx.offset+idx.size) {
@@ -111,29 +128,31 @@ func (ci *CombinedIndex) find_vector_index_for_item_index(item_index ItemIndex) 
 	return 0, nil, fmt.Errorf("out of index")
 }
 
+// ItemIndexToWord returns the item index based on a word or an error
 func (ci *CombinedIndex) ItemIndexToWord(item ItemIndex) (string, error) {
-	offsetted_index, vi, err := ci.find_vector_index_for_item_index(item)
+	offsettedIndex, vi, err := ci.findVectorIndexForItemIndex(item)
 
 	if err != nil {
 		return "", err
 	}
 
-	word, err := (*vi).ItemIndexToWord(offsetted_index)
+	word, err := (*vi).ItemIndexToWord(offsettedIndex)
 	return word, err
 }
 
+// GetVectorForItemIndex returns the vector based on an index or returns an error
 func (ci *CombinedIndex) GetVectorForItemIndex(item ItemIndex) (*Vector, error) {
-	offsetted_index, vi, err := ci.find_vector_index_for_item_index(item)
+	offsettedIndex, vi, err := ci.findVectorIndexForItemIndex(item)
 
 	if err != nil {
 		return nil, err
 	}
 
-	word, err := (*vi).GetVectorForItemIndex(offsetted_index)
+	word, err := (*vi).GetVectorForItemIndex(offsettedIndex)
 	return word, err
 }
 
-// Compute the distance between two items.
+// GetDistance computes the distance between two items.
 func (ci *CombinedIndex) GetDistance(a ItemIndex, b ItemIndex) (float32, error) {
 	v1, err := ci.GetVectorForItemIndex(a)
 	if err != nil {
@@ -153,7 +172,7 @@ func (ci *CombinedIndex) GetDistance(a ItemIndex, b ItemIndex) (float32, error) 
 	return dist, nil
 }
 
-// Get the n nearest neighbours of item, examining k trees.
+// GetNnsByItem gets the n nearest neighbours of item, examining k trees.
 // Returns an array of indices, and of distances between item and the n-nearest neighbors.
 func (ci *CombinedIndex) GetNnsByItem(item ItemIndex, n int, k int) ([]ItemIndex, []float32, error) {
 	vec, err := ci.GetVectorForItemIndex(item)
@@ -164,19 +183,19 @@ func (ci *CombinedIndex) GetNnsByItem(item ItemIndex, n int, k int) ([]ItemIndex
 	return ci.GetNnsByVector(*vec, n, k)
 }
 
-type combined_nn_search_result struct {
+type combinedNnSearchResult struct {
 	item ItemIndex
 	dist float32
 }
 
-type combined_nn_search_results struct {
-	items []combined_nn_search_result
+type combinedNnSearchResults struct {
+	items []combinedNnSearchResult
 	ci    *CombinedIndex
 }
 
-func (a combined_nn_search_results) Len() int      { return len(a.items) }
-func (a combined_nn_search_results) Swap(i, j int) { a.items[i], a.items[j] = a.items[j], a.items[i] }
-func (a combined_nn_search_results) Less(i, j int) bool {
+func (a combinedNnSearchResults) Len() int      { return len(a.items) }
+func (a combinedNnSearchResults) Swap(i, j int) { a.items[i], a.items[j] = a.items[j], a.items[i] }
+func (a combinedNnSearchResults) Less(i, j int) bool {
 	// Sort on distance first, if those are the same, sort on lexographical order of the words.
 	if a.items[i].dist == a.items[j].dist {
 		wi, err := a.ci.ItemIndexToWord(a.items[i].item)
@@ -189,34 +208,32 @@ func (a combined_nn_search_results) Less(i, j int) bool {
 			panic("should be there")
 		}
 		return wi < wj
-	} else {
-		return a.items[i].dist < a.items[j].dist
 	}
+	return a.items[i].dist < a.items[j].dist
 }
 
 // Remove a certain element from the result search.
-func (a *combined_nn_search_results) Remove(i int) {
+func (a *combinedNnSearchResults) Remove(i int) {
 	a.items = append(a.items[:i], a.items[i+1:]...)
 }
 
-// Get the n nearest neighbours of item, examining k trees.
+// GetNnsByVector gets the n nearest neighbours of item, examining k trees.
 // Returns an array of indices, and of distances between item and the n-nearest neighbors.
 func (ci *CombinedIndex) GetNnsByVector(vector Vector, n int, k int) ([]ItemIndex, []float32, error) {
-	results := combined_nn_search_results{
-		items: make([]combined_nn_search_result, 0),
+	results := combinedNnSearchResults{
+		items: make([]combinedNnSearchResult, 0),
 		ci:    ci,
 	}
 
 	for _, item := range ci.indices {
 		indices, floats, err := (*item.index).GetNnsByVector(vector, n, k)
 
-		if err != nil {
-			return nil, nil, err
-		} else {
-			for i, item_idx := range indices {
-				results.items = append(results.items, combined_nn_search_result{item: item_idx + ItemIndex(item.offset), dist: floats[i]})
+		if err == nil {
+			for i, itemIdx := range indices {
+				results.items = append(results.items, combinedNnSearchResult{item: itemIdx + ItemIndex(item.offset), dist: floats[i]})
 			}
 		}
+		return nil, nil, err
 	}
 
 	sort.Sort(results)
@@ -233,15 +250,15 @@ func (ci *CombinedIndex) GetNnsByVector(vector Vector, n int, k int) ([]ItemInde
 	items := make([]ItemIndex, 0)
 	floats := make([]float32, 0)
 
-	var max_index int
+	var maxIndex int
 
 	if n < len(results.items) {
-		max_index = n
+		maxIndex = n
 	} else {
-		max_index = len(results.items)
+		maxIndex = len(results.items)
 	}
 
-	for i := 0; i < max_index; i++ {
+	for i := 0; i < maxIndex; i++ {
 		items = append(items, results.items[i].item)
 		floats = append(floats, results.items[i].dist)
 	}

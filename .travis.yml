@@ -33,6 +33,8 @@ before_script:
 script: 
   # Verify that the code is properly formatted.
   - if [[ -n "$(gofmt -l .)" ]]; then echo "The following files were not formatted properly!"; gofmt -l .; exit 1; fi
+  - if [ $(golint -min_confidence=0.21 ./... | wc -l) -ne 0 ]; then echo "There are linting errors, check the go linting"; exit 1; fi
+  - golint -min_confidence=0.25 ./...
   # Run unit-like tests
   - go test ./contextionary
   # Running Cassandra deamon

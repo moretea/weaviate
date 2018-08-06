@@ -1,3 +1,15 @@
+/*                          _       _
+ *__      _____  __ ___   ___  __ _| |_ ___
+ *\ \ /\ / / _ \/ _` \ \ / / |/ _` | __/ _ \
+ * \ V  V /  __/ (_| |\ V /| | (_| | ||  __/
+ *  \_/\_/ \___|\__,_| \_/ |_|\__,_|\__\___|
+ *
+ * Copyright © 2016 - 2018 Weaviate. All rights reserved.
+ * LICENSE: https://github.com/creativesoftwarefdn/weaviate/blob/develop/LICENSE.md
+ * AUTHOR: Bob van Luijt (bob@kub.design)
+ * See www.creativesoftwarefdn.org for details
+ * Contact: @CreativeSofwFdn / bob@kub.design
+ */
 package contextionary
 
 import (
@@ -50,12 +62,12 @@ func TestMMappedIndex(t *testing.T) {
 
 	t.Run("Generating index", func(t *testing.T) {
 		// Now build an index based on this
-		var gen_opts generator.Options
-		gen_opts.VectorCSVPath = tempdir + "/glove.txt"
-		gen_opts.TempDBPath = tempdir + "/tempdb"
-		gen_opts.OutputPrefix = tempdir + "/glove"
-		gen_opts.K = 3
-		generator.Generate(gen_opts)
+		var genOpts generator.Options
+		genOpts.VectorCSVPath = tempdir + "/glove.txt"
+		genOpts.TempDBPath = tempdir + "/tempdb"
+		genOpts.OutputPrefix = tempdir + "/glove"
+		genOpts.K = 3
+		generator.Generate(genOpts)
 	})
 
 	// And load the index.
@@ -64,7 +76,7 @@ func TestMMappedIndex(t *testing.T) {
 		t.Errorf("Could not load vectors from disk: %v", err)
 	}
 
-	shared_tests(t, vi)
+	sharedTests(t, vi)
 }
 
 func TestInMemoryIndex(t *testing.T) {
@@ -74,9 +86,9 @@ func TestInMemoryIndex(t *testing.T) {
 		builder.AddWord(v.word, NewVector(v.vec))
 	}
 
-	memory_index := Contextionary(builder.Build(3))
+	memoryIndex := Contextionary(builder.Build(3))
 
-	shared_tests(t, &memory_index)
+	sharedTests(t, &memoryIndex)
 }
 
 func TestCombinedIndex(t *testing.T) {
@@ -95,36 +107,36 @@ func TestCombinedIndex(t *testing.T) {
 		builder2.AddWord(v.word, NewVector(v.vec))
 	}
 
-	memory_index1 := Contextionary(builder1.Build(3))
-	memory_index2 := Contextionary(builder2.Build(3))
+	memoryIndex1 := Contextionary(builder1.Build(3))
+	memoryIndex2 := Contextionary(builder2.Build(3))
 
-	var indices12 []Contextionary = []Contextionary{memory_index1, memory_index2}
-	var indices21 []Contextionary = []Contextionary{memory_index2, memory_index1}
+	indices12 := []Contextionary{memoryIndex1, memoryIndex2}
+	indices21 := []Contextionary{memoryIndex2, memoryIndex1}
 
-	t.Run("indices 1,2", func(t *testing.T) { test_combined(t, indices12) })
-	t.Run("indices 2,1", func(t *testing.T) { test_combined(t, indices21) })
+	t.Run("indices 1,2", func(t *testing.T) { testCombined(t, indices12) })
+	t.Run("indices 2,1", func(t *testing.T) { testCombined(t, indices21) })
 }
 
-func test_combined(t *testing.T, indices []Contextionary) {
-	combined_index, err := CombineVectorIndices(indices)
+func testCombined(t *testing.T, indices []Contextionary) {
+	combinedIndex, err := CombineVectorIndices(indices)
 	if err != nil {
 		t.Errorf("Combining failed")
 		t.FailNow()
 	}
 
-	err = combined_index.VerifyDisjoint()
+	err = combinedIndex.VerifyDisjoint()
 
 	if err != nil {
 		t.Errorf("Not disjoint; %v", err)
 		t.FailNow()
 	}
 
-	vi := Contextionary(combined_index)
+	vi := Contextionary(combinedIndex)
 
-	shared_tests(t, &vi)
+	sharedTests(t, &vi)
 }
 
-func shared_tests(t *testing.T, vi *Contextionary) {
+func sharedTests(t *testing.T, vi *Contextionary) {
 	t.Run("Number of elements is correct", func(t *testing.T) {
 		expected := 5
 		found := (*vi).GetNumberOfItems()
@@ -154,12 +166,12 @@ func shared_tests(t *testing.T, vi *Contextionary) {
 	t.Run("Check that feature vectors are stored properly", func(t *testing.T) {
 		for i := 0; i < len(vectorTests); i++ {
 			vt := vectorTests[i]
-			word_index := (*vi).WordToItemIndex(vt.word)
-			if !word_index.IsPresent() {
+			wordIndex := (*vi).WordToItemIndex(vt.word)
+			if !wordIndex.IsPresent() {
 				t.Errorf("Could not find word %v", vt.word)
 			}
 			// Get back the feature vectors.
-			vector, err := (*vi).GetVectorForItemIndex(word_index)
+			vector, err := (*vi).GetVectorForItemIndex(wordIndex)
 			if err != nil {
 				t.Errorf("Could not get vector")
 			}
@@ -185,36 +197,36 @@ func shared_tests(t *testing.T, vi *Contextionary) {
 	t.Run("Test that the distances between all pairs of test data is correct", func(t *testing.T) {
 		for i := 0; i < len(vectorTests); i++ {
 			for j := 0; j < len(vectorTests); j++ {
-				vt_a := vectorTests[i]
-				vt_b := vectorTests[j]
-				vt_a_vec := NewVector(vt_a.vec)
-				vt_b_vec := NewVector(vt_b.vec)
+				vtA := vectorTests[i]
+				vtB := vectorTests[j]
+				vtAVec := NewVector(vtA.vec)
+				vtBVec := NewVector(vtB.vec)
 
-				wi_a := (*vi).WordToItemIndex(vt_a.word)
-				wi_b := (*vi).WordToItemIndex(vt_b.word)
+				wiA := (*vi).WordToItemIndex(vtA.word)
+				wiB := (*vi).WordToItemIndex(vtB.word)
 
-				annoy_dist, err := (*vi).GetDistance(wi_a, wi_b)
+				annoyDist, err := (*vi).GetDistance(wiA, wiB)
 				if err != nil {
 					t.Errorf("Could not compute distance")
 				}
 
-				simple_dist, err := vt_a_vec.Distance(&vt_b_vec)
+				simpleDist, err := vtAVec.Distance(&vtBVec)
 				if err != nil {
 					panic("should be same length")
 				}
 
-				if !equal_float_epsilon(annoy_dist, simple_dist, 0.00003) {
-					t.Errorf("Distance between %v and %v incorrect; %v (annoy) vs %v (test impl)", vt_a.word, vt_b.word, annoy_dist, simple_dist)
+				if !equalFloatEpsilon(annoyDist, simpleDist, 0.00003) {
+					t.Errorf("Distance between %v and %v incorrect; %v (annoy) vs %v (test impl)", vtA.word, vtB.word, annoyDist, simpleDist)
 				}
 			}
 		}
 	})
 
 	t.Run("Test nearest neighbours apple & fruit", func(t *testing.T) {
-		apple_idx := (*vi).WordToItemIndex("apple")
-		fruit_idx := (*vi).WordToItemIndex("fruit")
+		appleIdx := (*vi).WordToItemIndex("apple")
+		fruitIdx := (*vi).WordToItemIndex("fruit")
 
-		res, distances, err := (*vi).GetNnsByItem(fruit_idx, 2, 3)
+		res, distances, err := (*vi).GetNnsByItem(fruitIdx, 2, 3)
 		t.Logf("%v, %v, %v\n", res, distances, err)
 		if err != nil {
 			t.Errorf("GetNNs failed!")
@@ -223,26 +235,26 @@ func shared_tests(t *testing.T, vi *Contextionary) {
 			t.Errorf("Wrong number of items returned; got %v expected 2", len(res))
 		}
 		// res[0] will be fruit itself.
-		if res[0] != fruit_idx {
-			closest_to, _ := (*vi).ItemIndexToWord(res[0])
-			t.Errorf("closest element should be itself, fruit, but was '%v'. all results:\n%v", closest_to, debug_print_items(vi, res, distances))
+		if res[0] != fruitIdx {
+			closestTo, _ := (*vi).ItemIndexToWord(res[0])
+			t.Errorf("closest element should be itself, fruit, but was '%v'. all results:\n%v", closestTo, debugPrintItems(vi, res, distances))
 		}
 
-		if res[1] != apple_idx {
-			closest_to, _ := (*vi).ItemIndexToWord(res[1])
-			t.Errorf("apple should be closest to apple, but was '%v'. all results:\n%v", closest_to, debug_print_items(vi, res, distances))
+		if res[1] != appleIdx {
+			closestTo, _ := (*vi).ItemIndexToWord(res[1])
+			t.Errorf("apple should be closest to apple, but was '%v'. all results:\n%v", closestTo, debugPrintItems(vi, res, distances))
 		}
 
-		if !equal_float_epsilon(distances[1], 0.2, 0.0002) {
+		if !equalFloatEpsilon(distances[1], 0.2, 0.0002) {
 			t.Errorf("Wrong distances!, got %v", distances[1])
 		}
 	})
 
 	t.Run("Test nearest neighbours computer & company", func(t *testing.T) {
-		company_idx := (*vi).WordToItemIndex("company")
-		computer_idx := (*vi).WordToItemIndex("computer")
+		companyIdx := (*vi).WordToItemIndex("company")
+		computerIdx := (*vi).WordToItemIndex("computer")
 
-		res, distances, err := (*vi).GetNnsByItem(company_idx, 2, 3)
+		res, distances, err := (*vi).GetNnsByItem(companyIdx, 2, 3)
 		if err != nil {
 			t.Errorf("GetNNs failed!")
 		}
@@ -251,23 +263,23 @@ func shared_tests(t *testing.T, vi *Contextionary) {
 			t.FailNow()
 		}
 		// res[0] will be company itself.
-		if res[1] != computer_idx {
+		if res[1] != computerIdx {
 			t.Errorf("computer should be closest to company!")
 		}
 
-		if !equal_float_epsilon(distances[1], 1, 0.0002) {
+		if !equalFloatEpsilon(distances[1], 1, 0.0002) {
 			t.Errorf("Wrong distances!, got %v", distances[1])
 		}
 	})
 
 	t.Run("Test k-nearest from vector", func(t *testing.T) {
-		var apple_pie = NewVector( /* centroid of apple and pie */ []float32{0.5, 0.5, 0})
+		var applePie = NewVector( /* centroid of apple and pie */ []float32{0.5, 0.5, 0})
 
-		fruit_idx := (*vi).WordToItemIndex("fruit")
-		apple_idx := (*vi).WordToItemIndex("apple")
-		pie_idx := (*vi).WordToItemIndex("pie")
+		fruitIdx := (*vi).WordToItemIndex("fruit")
+		appleIdx := (*vi).WordToItemIndex("apple")
+		pieIdx := (*vi).WordToItemIndex("pie")
 
-		res, distances, err := (*vi).GetNnsByVector(apple_pie, 3, 3)
+		res, distances, err := (*vi).GetNnsByVector(applePie, 3, 3)
 		if err != nil {
 			t.Errorf("GetNNs failed: %v", err)
 			t.FailNow()
@@ -277,9 +289,9 @@ func shared_tests(t *testing.T, vi *Contextionary) {
 			t.FailNow()
 		}
 
-		if res[0] != fruit_idx {
-			closest_to, _ := (*vi).ItemIndexToWord(res[1])
-			t.Errorf("fruit should be closest to fruit!, but was '%v'", closest_to)
+		if res[0] != fruitIdx {
+			closestTo, _ := (*vi).ItemIndexToWord(res[1])
+			t.Errorf("fruit should be closest to fruit!, but was '%v'", closestTo)
 			t.Errorf("got results: %+v", res)
 			for _, i := range res {
 				word, err := (*vi).ItemIndexToWord(i)
@@ -287,59 +299,59 @@ func shared_tests(t *testing.T, vi *Contextionary) {
 			}
 		}
 
-		if res[1] != apple_idx {
-			closest_to, _ := (*vi).ItemIndexToWord(res[1])
-			t.Errorf("apple should be 2nd closest to apple!, but was '%v'", closest_to)
+		if res[1] != appleIdx {
+			closestTo, _ := (*vi).ItemIndexToWord(res[1])
+			t.Errorf("apple should be 2nd closest to apple!, but was '%v'", closestTo)
 		}
 
-		if res[2] != pie_idx {
-			closest_to, _ := (*vi).ItemIndexToWord(res[2])
-			t.Errorf("pie should be 3rd closest to pie!, but was '%v'", closest_to)
+		if res[2] != pieIdx {
+			closestTo, _ := (*vi).ItemIndexToWord(res[2])
+			t.Errorf("pie should be 3rd closest to pie!, but was '%v'", closestTo)
 		}
 
-		v_fruit, err := (*vi).GetVectorForItemIndex(fruit_idx)
+		vFruit, err := (*vi).GetVectorForItemIndex(fruitIdx)
 		if err != nil {
 			t.Errorf("could not fetch fruit vector")
 			return
 		}
 
-		v_apple, err := (*vi).GetVectorForItemIndex(apple_idx)
+		vApple, err := (*vi).GetVectorForItemIndex(appleIdx)
 		if err != nil {
 			panic("could not fetch apple vector")
 		}
 
-		v_pie, err := (*vi).GetVectorForItemIndex(pie_idx)
+		vPie, err := (*vi).GetVectorForItemIndex(pieIdx)
 		if err != nil {
 			panic("could not fetch pie vector")
 		}
 
-		distance_to_fruit, err := apple_pie.Distance(v_fruit)
+		distanceToFruit, err := applePie.Distance(vFruit)
 		if err != nil {
 			panic("should be same length")
 		}
-		if !equal_float_epsilon(distances[0], distance_to_fruit, 0.0001) {
-			t.Errorf("Wrong distance for fruit, expect %v, got %v", distance_to_fruit, distances[0])
+		if !equalFloatEpsilon(distances[0], distanceToFruit, 0.0001) {
+			t.Errorf("Wrong distance for fruit, expect %v, got %v", distanceToFruit, distances[0])
 		}
 
-		distance_to_apple, err := apple_pie.Distance(v_apple)
+		distanceToApple, err := applePie.Distance(vApple)
 		if err != nil {
 			panic("should be same length")
 		}
-		if !equal_float_epsilon(distances[1], distance_to_apple, 0.0001) {
+		if !equalFloatEpsilon(distances[1], distanceToApple, 0.0001) {
 			t.Errorf("Wrong distance for apple, got %v", distances[1])
 		}
 
-		distance_to_pie, err := apple_pie.Distance(v_pie)
+		distanceToPie, err := applePie.Distance(vPie)
 		if err != nil {
 			panic("should be same size")
 		}
-		if !equal_float_epsilon(distances[2], distance_to_pie, 0.0001) {
-			t.Errorf("Wrong distance for pie, expected %v, got %v", distance_to_pie, distances[2])
+		if !equalFloatEpsilon(distances[2], distanceToPie, 0.0001) {
+			t.Errorf("Wrong distance for pie, expected %v, got %v", distanceToPie, distances[2])
 		}
 	})
 }
 
-func equal_float_epsilon(a float32, b float32, epsilon float32) bool {
+func equalFloatEpsilon(a float32, b float32, epsilon float32) bool {
 	var min, max float32
 
 	if a < b {
@@ -353,7 +365,7 @@ func equal_float_epsilon(a float32, b float32, epsilon float32) bool {
 	return max <= (min + epsilon)
 }
 
-func debug_print_items(vi *Contextionary, items []ItemIndex, distances []float32) string {
+func debugPrintItems(vi *Contextionary, items []ItemIndex, distances []float32) string {
 	result := ""
 	for i, item := range items {
 		w, _ := (*vi).ItemIndexToWord(item)

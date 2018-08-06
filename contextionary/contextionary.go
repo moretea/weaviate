@@ -1,13 +1,25 @@
-package contextionary
+/*                          _       _
+ *__      _____  __ ___   ___  __ _| |_ ___
+ *\ \ /\ / / _ \/ _` \ \ / / |/ _` | __/ _ \
+ * \ V  V /  __/ (_| |\ V /| | (_| | ||  __/
+ *  \_/\_/ \___|\__,_| \_/ |_|\__,_|\__\___|
+ *
+ * Copyright © 2016 - 2018 Weaviate. All rights reserved.
+ * LICENSE: https://github.com/creativesoftwarefdn/weaviate/blob/develop/LICENSE.md
+ * AUTHOR: Bob van Luijt (bob@kub.design)
+ * See www.creativesoftwarefdn.org for details
+ * Contact: @CreativeSofwFdn / bob@kub.design
+ */package contextionary
 
-// Opaque type that models an index number used to identify a word.
+// ItemIndex is an opaque type that models an index number used to identify a word.
 type ItemIndex int
 
+// IsPresent returns a boolean value if the item is present
 func (i *ItemIndex) IsPresent() bool {
 	return *i >= 0
 }
 
-// API to decouple the K-nn interface that is needed for Weaviate from a concrete implementation.
+// Contextionary is the API to decouple the K-nn interface that is needed for Weaviate from a concrete implementation.
 type Contextionary interface {
 	// Return the number of items that is stored in the index.
 	GetNumberOfItems() int

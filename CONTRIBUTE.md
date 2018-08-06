@@ -18,6 +18,10 @@ For example: `gh-100: This is the commit message`
 
 AKA: smart commits
 
+### Linting
+
+Make sure your linting passes: `golint -min_confidence=0.25 ./...`
+
 ### Pull Request
 
 If you create a pull request without smart commits, the pull request will be [squashed into](https://blog.github.com/2016-04-01-squash-your-commits/) one git commit.

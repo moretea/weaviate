@@ -1,4 +1,15 @@
-package contextionary
+/*                          _       _
+ *__      _____  __ ___   ___  __ _| |_ ___
+ *\ \ /\ / / _ \/ _` \ \ / / |/ _` | __/ _ \
+ * \ V  V /  __/ (_| |\ V /| | (_| | ||  __/
+ *  \_/\_/ \___|\__,_| \_/ |_|\__,_|\__\___|
+ *
+ * Copyright © 2016 - 2018 Weaviate. All rights reserved.
+ * LICENSE: https://github.com/creativesoftwarefdn/weaviate/blob/develop/LICENSE.md
+ * AUTHOR: Bob van Luijt (bob@kub.design)
+ * See www.creativesoftwarefdn.org for details
+ * Contact: @CreativeSofwFdn / bob@kub.design
+ */package contextionary
 
 import (
 	"testing"
@@ -6,7 +17,7 @@ import (
 
 func TestComputeCentroid(t *testing.T) {
 
-	assert_centroid_equal := func(points []Vector, expected Vector) {
+	assertCentroidEqual := func(points []Vector, expected Vector) {
 		centroid, err := ComputeCentroid(points)
 		if err != nil {
 			t.Errorf("Could not compute centroid of %v", points)
@@ -17,25 +28,25 @@ func TestComputeCentroid(t *testing.T) {
 		}
 
 		if !equal {
-			points_str := "{"
+			pointsStr := "{"
 			first := true
 
 			for _, point := range points {
 				if first {
 					first = false
 				} else {
-					points_str += ", "
+					pointsStr += ", "
 				}
 
-				points_str += point.ToString()
+				pointsStr += point.ToString()
 			}
-			points_str += "}"
+			pointsStr += "}"
 
-			t.Errorf("centroid of %v should be %v but was %v", points_str, expected.ToString(), centroid.ToString())
+			t.Errorf("centroid of %v should be %v but was %v", pointsStr, expected.ToString(), centroid.ToString())
 		}
 	}
 
-	assert_weighted_centroid_equal := func(points []Vector, weights []float32, expected Vector) {
+	assertWeightedCentroidEqual := func(points []Vector, weights []float32, expected Vector) {
 		centroid, err := ComputeWeightedCentroid(points, weights)
 		if err != nil {
 			t.Errorf("Could not compute centroid of %v", points)
@@ -46,21 +57,21 @@ func TestComputeCentroid(t *testing.T) {
 		}
 
 		if !equal {
-			points_str := "{"
+			pointsStr := "{"
 			first := true
 
 			for _, point := range points {
 				if first {
 					first = false
 				} else {
-					points_str += ", "
+					pointsStr += ", "
 				}
 
-				points_str += point.ToString()
+				pointsStr += point.ToString()
 			}
-			points_str += "}"
+			pointsStr += "}"
 
-			t.Errorf("centroid of %v should be %v but was %v", points_str, expected.ToString(), centroid.ToString())
+			t.Errorf("centroid of %v should be %v but was %v", pointsStr, expected.ToString(), centroid.ToString())
 		}
 	}
 
@@ -68,10 +79,10 @@ func TestComputeCentroid(t *testing.T) {
 	vb := NewVector([]float32{0, 0, 0})
 	vc := NewVector([]float32{-1, -1, -1})
 
-	assert_centroid_equal([]Vector{va, vb}, NewVector([]float32{0.5, 0.5, 0.5}))
-	assert_centroid_equal([]Vector{va, vb, vc}, NewVector([]float32{0.0, 0.0, 0.0}))
+	assertCentroidEqual([]Vector{va, vb}, NewVector([]float32{0.5, 0.5, 0.5}))
+	assertCentroidEqual([]Vector{va, vb, vc}, NewVector([]float32{0.0, 0.0, 0.0}))
 
-	assert_weighted_centroid_equal([]Vector{va, vb}, []float32{1, 0}, va)
-	assert_weighted_centroid_equal([]Vector{va, vb}, []float32{0, 1}, vb)
-	assert_weighted_centroid_equal([]Vector{va, vb}, []float32{0.66, 0.33}, NewVector([]float32{0.66, 0.66, 0.66}))
+	assertWeightedCentroidEqual([]Vector{va, vb}, []float32{1, 0}, va)
+	assertWeightedCentroidEqual([]Vector{va, vb}, []float32{0, 1}, vb)
+	assertWeightedCentroidEqual([]Vector{va, vb}, []float32{0.66, 0.33}, NewVector([]float32{0.66, 0.66, 0.66}))
 }

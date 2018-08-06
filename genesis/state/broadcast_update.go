@@ -1,4 +1,15 @@
-package state
+/*                          _       _
+ *__      _____  __ ___   ___  __ _| |_ ___
+ *\ \ /\ / / _ \/ _` \ \ / / |/ _` | __/ _ \
+ * \ V  V /  __/ (_| |\ V /| | (_| | ||  __/
+ *  \_/\_/ \___|\__,_| \_/ |_|\__,_|\__\___|
+ *
+ * Copyright © 2016 - 2018 Weaviate. All rights reserved.
+ * LICENSE: https://github.com/creativesoftwarefdn/weaviate/blob/develop/LICENSE.md
+ * AUTHOR: Bob van Luijt (bob@kub.design)
+ * See www.creativesoftwarefdn.org for details
+ * Contact: @CreativeSofwFdn / bob@kub.design
+ */package state
 
 import (
 	weaviate_client "github.com/creativesoftwarefdn/weaviate/client"
@@ -10,38 +21,38 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func broadcast_update(peer Peer, peers []Peer) {
-	log.Debugf("Broadcasting peer update to %v", peer.Id)
-	peer_uri, err := url.Parse(string(peer.URI()))
+func broadcastUpdate(peer Peer, peers []Peer) {
+	log.Debugf("Broadcasting peer update to %v", peer.ID)
+	peerURI, err := url.Parse(string(peer.URI()))
 
 	if err != nil {
-		log.Infof("Could not broadcast to peer %v; Peer URI is invalid (%v)", peer.Id, peer.URI())
+		log.Infof("Could not broadcast to peer %v; Peer URI is invalid (%v)", peer.ID, peer.URI())
 		return
 	}
 
-	transport_config := weaviate_client.TransportConfig{
-		Host:     peer_uri.Host,
-		BasePath: peer_uri.Path,
-		Schemes:  []string{peer_uri.Scheme},
+	transportConfig := weaviate_client.TransportConfig{
+		Host:     peerURI.Host,
+		BasePath: peerURI.Path,
+		Schemes:  []string{peerURI.Scheme},
 	}
 
-	peer_updates := make(weaviate_models.PeerUpdateList, 0)
+	peerUpdates := make(weaviate_models.PeerUpdateList, 0)
 
 	for _, peer := range peers {
-		peer_update := weaviate_models.PeerUpdate{
+		peerUpdate := weaviate_models.PeerUpdate{
 			URI:  peer.URI(),
-			ID:   peer.Id,
+			ID:   peer.ID,
 			Name: peer.Name(),
 		}
 
-		peer_updates = append(peer_updates, &peer_update)
+		peerUpdates = append(peerUpdates, &peerUpdate)
 	}
 
-	client := weaviate_client.NewHTTPClientWithConfig(nil, &transport_config)
+	client := weaviate_client.NewHTTPClientWithConfig(nil, &transportConfig)
 	params := weaviate_p2p.NewWeaviateP2pGenesisUpdateParams()
-	params.Peers = peer_updates
+	params.Peers = peerUpdates
 	_, err = client.P2P.WeaviateP2pGenesisUpdate(params)
 	if err != nil {
-		log.Debugf("Failed to update %v, because %v", peer.Id, err)
+		log.Debugf("failed to update %v, because %v", peer.ID, err)
 	}
 }

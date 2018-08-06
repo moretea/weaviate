@@ -12,15 +12,20 @@
  */
 
 // Package restapi with all rest API functions.
-package weaviateBroker
+
+package weaviatebroker
 
 import (
 	"github.com/creativesoftwarefdn/weaviate/messages"
 	MQTT "github.com/eclipse/paho.mqtt.golang"
 )
 
+// MqttEnabled contains a bool value of Mqtt is enabled
 var MqttEnabled bool
+
+// MqttClient contains the MQTT client
 var MqttClient MQTT.Client
+
 var messaging *messages.Messaging
 
 // ConnectToMqtt connects to Weaviate Mqtt Broker

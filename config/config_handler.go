@@ -57,12 +57,14 @@ type Environment struct {
 	Contextionary Contextionary `json:"contextionary"`
 }
 
+// Contextionary contains the location of KNN and IDX files
 type Contextionary struct {
 	KNNFile      string `json:"knn_file"`
 	IDXFile      string `json:"idx_file"`
 	failOnGerund bool   `json:"fail_ongerund"` // is false by default.
 }
 
+// Network contains basic URL information
 type Network struct {
 	GenesisURL string `json:"genesis_url"`
 	PublicURL  string `json:"public_url"`

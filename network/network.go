@@ -1,17 +1,28 @@
-package network
+/*                          _       _
+ *__      _____  __ ___   ___  __ _| |_ ___
+ *\ \ /\ / / _ \/ _` \ \ / / |/ _` | __/ _ \
+ * \ V  V /  __/ (_| |\ V /| | (_| | ||  __/
+ *  \_/\_/ \___|\__,_| \_/ |_|\__,_|\__\___|
+ *
+ * Copyright © 2016 - 2018 Weaviate. All rights reserved.
+ * LICENSE: https://github.com/creativesoftwarefdn/weaviate/blob/develop/LICENSE.md
+ * AUTHOR: Bob van Luijt (bob@kub.design)
+ * See www.creativesoftwarefdn.org for details
+ * Contact: @CreativeSofwFdn / bob@kub.design
+ */package network
 
 import (
 	"github.com/go-openapi/strfmt"
 )
 
-// A peer represents a known peer, given to us by the Genesis service.
+// Peer represents a known peer, given to us by the Genesis service.
 type Peer struct {
-	Id   strfmt.UUID
+	ID   strfmt.UUID
 	Name string
 	URI  strfmt.URI
 }
 
-// Minimal abstraction over the network. This is the only API exposed to the rest of Weaviate.
+// Network is a minimal abstraction over the network. This is the only API exposed to the rest of Weaviate.
 type Network interface {
 	IsReady() bool
 	GetStatus() string
@@ -19,7 +30,7 @@ type Network interface {
 	ListPeers() ([]Peer, error)
 
 	// Invoked by the Genesis server via an HTTP endpoint.
-	UpdatePeers(new_peers []Peer) error
+	UpdatePeers(newPeers []Peer) error
 
 	// TODO: We'll add functions like
 	// - QueryNetwork(q NetworkQuery, timeout int) (chan NetworkResponse, error)
