@@ -19,8 +19,11 @@ import (
 	"time"
 
 	"github.com/go-openapi/strfmt"
+	"github.com/nicksrandall/dataloader"
 
 	"github.com/creativesoftwarefdn/weaviate/config"
+	"github.com/creativesoftwarefdn/weaviate/connectors"
+	"github.com/creativesoftwarefdn/weaviate/connectors/utils"
 	"github.com/creativesoftwarefdn/weaviate/messages"
 	"github.com/creativesoftwarefdn/weaviate/models"
 	"github.com/creativesoftwarefdn/weaviate/schema"
@@ -199,7 +202,7 @@ func (f *DataLoader) Attach(ctx context.Context) (context.Context, error) {
 		dataloader.WithWait(50*time.Millisecond),
 		dataloader.WithBatchCapacity(100),
 	)
-	ctx = context.WithValue(ctx, thingsDataLoader.(int), thingsLoader)
+	ctx = context.WithValue(ctx, thingsDataLoader, thingsLoader)
 
 	// create Loader with an in-memory cache
 	actionsLoader := dataloader.NewBatchedLoader(
@@ -207,7 +210,7 @@ func (f *DataLoader) Attach(ctx context.Context) (context.Context, error) {
 		dataloader.WithWait(50*time.Millisecond),
 		dataloader.WithBatchCapacity(100),
 	)
-	ctx = context.WithValue(ctx, actionsDataLoader.(int), actionsLoader)
+	ctx = context.WithValue(ctx, actionsDataLoader, actionsLoader)
 
 	// create Loader with an in-memory cache
 	keysLoader := dataloader.NewBatchedLoader(
@@ -216,7 +219,7 @@ func (f *DataLoader) Attach(ctx context.Context) (context.Context, error) {
 		dataloader.WithBatchCapacity(100),
 	)
 
-	ctx = context.WithValue(ctx, keyPrincipalID.(int), keysLoader)
+	ctx = context.WithValue(ctx, keysDataLoader, keysLoader)
 
 	return f.databaseConnector.Attach(ctx)
 }

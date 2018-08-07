@@ -486,7 +486,7 @@ func configureAPI(api *operations.WeaviateAPI) http.Handler {
 
 		// broadcast to MQTT
 		mqttJSON, _ := json.Marshal(responseObject)
-		weaviateBroker.Publish("/actions/"+string(responseObject.ActionID), string(mqttJSON[:]))
+		weaviatebroker.Publish("/actions/"+string(responseObject.ActionID), string(mqttJSON[:]))
 
 		// Return SUCCESS (NOTE: this is ACCEPTED, so the dbConnector.Add should have a go routine)
 		return actions.NewWeaviateActionUpdateAccepted().WithPayload(responseObject)
@@ -1126,7 +1126,7 @@ func configureAPI(api *operations.WeaviateAPI) http.Handler {
 
 		// broadcast to MQTT
 		mqttJSON, _ := json.Marshal(responseObject)
-		weaviateBroker.Publish("/things/"+string(responseObject.ThingID), string(mqttJSON[:]))
+		weaviatebroker.Publish("/things/"+string(responseObject.ThingID), string(mqttJSON[:]))
 
 		// Return SUCCESS (NOTE: this is ACCEPTED, so the dbConnector.Add should have a go routine)
 		return things.NewWeaviateThingsUpdateAccepted().WithPayload(responseObject)
@@ -1160,7 +1160,7 @@ func configureAPI(api *operations.WeaviateAPI) http.Handler {
 
 		for _, genesisPeer := range params.Peers {
 			peer := libnetwork.Peer{
-				Id:   genesisPeer.ID,
+				ID:   genesisPeer.ID,
 				Name: genesisPeer.Name,
 				URI:  genesisPeer.URI,
 			}
@@ -1321,7 +1321,7 @@ func configureServer(s *http.Server, scheme, addr string) {
 	connectToNetwork()
 
 	// Connect to MQTT via Broker
-	weaviateBroker.ConnectToMqtt(serverConfig.Environment.Broker.Host, serverConfig.Environment.Broker.Port)
+	weaviatebroker.ConnectToMqtt(serverConfig.Environment.Broker.Host, serverConfig.Environment.Broker.Port)
 
 	// Create the database connector usint the config
 	dbConnector = CreateDatabaseConnector(&serverConfig.Environment)
