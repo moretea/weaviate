@@ -49,7 +49,7 @@ func (f *KVCache) GetName() string {
 
 // GetLocalGraph handles the Local GraphQL response for this connector
 func (f *KVCache) GetLocalGraph(ctx context.Context, request graphql.ResolveParams) (interface{}, error) {
-	return nil, fmt.Errorf("Not supported")
+	return nil, fmt.Errorf("not supported for this connector")
 }
 
 // Connect function

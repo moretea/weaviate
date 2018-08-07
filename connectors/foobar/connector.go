@@ -91,7 +91,7 @@ func (f *Foobar) GetName() string {
 
 // GetLocalGraph handles the Local GraphQL response for this connector
 func (f *Foobar) GetLocalGraph(ctx context.Context, request graphql.ResolveParams) (interface{}, error) {
-	return nil, fmt.Errorf("Not supported")
+	return nil, fmt.Errorf("not supported for this connector")
 }
 
 // SetConfig sets variables, which can be placed in the config file section "database_config: {}"
