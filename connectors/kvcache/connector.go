@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"github.com/go-openapi/strfmt"
+	"github.com/graphql-go/graphql"
 	cache "github.com/patrickmn/go-cache"
 
 	"github.com/creativesoftwarefdn/weaviate/config"
@@ -46,9 +47,9 @@ func (f *KVCache) GetName() string {
 	return "kv-cache"
 }
 
-// returns the graph request results
-func (f *KVCache) GetGraph(ctx context.Context, request interface{}) (string, error) {
-	return "{}", nil
+// GetLocalGraph handles the Local GraphQL response for this connector
+func (f *KVCache) GetLocalGraph(ctx context.Context, request graphql.ResolveParams) (interface{}, error) {
+	return nil, fmt.Errorf("Not supported")
 }
 
 // Connect function

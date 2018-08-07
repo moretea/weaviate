@@ -43,6 +43,7 @@ import (
 
 	"github.com/go-openapi/strfmt"
 	"github.com/gorilla/websocket"
+	"github.com/graphql-go/graphql"
 	"github.com/mitchellh/mapstructure"
 
 	"github.com/creativesoftwarefdn/weaviate/config"
@@ -88,9 +89,9 @@ func (f *Foobar) GetName() string {
 	return "foobar"
 }
 
-// returns the graph request results
-func (f *Foobar) GetGraph(ctx context.Context, request interface{}) (string, error) {
-	return "{}", nil
+// GetLocalGraph handles the Local GraphQL response for this connector
+func (f *Foobar) GetLocalGraph(ctx context.Context, request graphql.ResolveParams) (interface{}, error) {
+	return nil, fmt.Errorf("Not supported")
 }
 
 // SetConfig sets variables, which can be placed in the config file section "database_config: {}"

@@ -18,6 +18,7 @@ import (
 
 	"github.com/creativesoftwarefdn/weaviate/connectors/utils"
 	"github.com/go-openapi/strfmt"
+	"github.com/graphql-go/graphql"
 
 	"github.com/creativesoftwarefdn/weaviate/config"
 	"github.com/creativesoftwarefdn/weaviate/messages"
@@ -60,7 +61,7 @@ type BaseConnector interface {
 	GetKeyChildren(ctx context.Context, UUID strfmt.UUID, children *[]*models.KeyGetResponse) error
 	UpdateKey(ctx context.Context, key *models.Key, UUID strfmt.UUID, token string) error
 
-	GetGraph(ctx context.Context, request interface{}) (string, error)
+	GetLocalGraph(ctx context.Context, request graphql.ResolveParams) (interface{}, error)
 }
 
 // DatabaseConnector is the interface that all DB-connectors should have
