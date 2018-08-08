@@ -20,8 +20,8 @@ type gremlinResponseStatus struct {
 }
 
 type gremlinResponseResult struct {
-	Data []interface{} `json:"data"`
-	Meta interface{}   `json:"meta"`
+	Data []gremlin.Datum `json:"data"`
+	Meta interface{}     `json:"meta"`
 }
 
 type gremlinResponse struct {

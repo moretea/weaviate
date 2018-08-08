@@ -1,7 +1,9 @@
 package gremlin
 
 import (
-  "strconv"
+	"fmt"
+	"strconv"
+	"strings"
 )
 
 // A query represents the (partial) query build with the DSL
@@ -18,9 +20,27 @@ func RawQuery(query string) *Query {
 	return &Query{query: query}
 }
 
+func (q *Query) V() *Query {
+	return extend_query(q, ".V()")
+}
+
+func (q *Query) E() *Query {
+	return extend_query(q, ".E()")
+}
+
 // Count how many vertices or edges are selected by the previous query.
 func (q *Query) Count() *Query {
 	return extend_query(q, ".count()")
+}
+
+func (q *Query) Select(refs []string) *Query {
+	sanitized := make([]string, 0)
+
+	for _, ref := range refs {
+		sanitized = append(sanitized, fmt.Sprintf(`"%s"`, escapeString(ref)))
+	}
+
+	return extend_query(q, ".select(%s)", strings.Join(sanitized, ","))
 }
 
 func (q *Query) AddV(label string) *Query {
@@ -58,6 +78,22 @@ func (q *Query) Int64Property(key string, value int64) *Query {
 
 func (q *Query) Float64Property(key string, value float64) *Query {
 	return extend_query(q, `.property("%s", (double) %v)`, escapeString(key), strconv.FormatFloat(value, 'g', -1, 64))
+}
+
+func (q *Query) In() *Query {
+	return extend_query(q, ".in()")
+}
+
+func (q *Query) InWithLabel(label string) *Query {
+	return extend_query(q, `.in("%s")`, escapeString(label))
+}
+
+func (q *Query) Out() *Query {
+	return extend_query(q, ".out()")
+}
+
+func (q *Query) OutWithLabel(label string) *Query {
+	return extend_query(q, `.out("%s")`, escapeString(label))
 }
 
 func (q *Query) InE() *Query {
