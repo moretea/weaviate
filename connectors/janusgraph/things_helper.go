@@ -9,7 +9,7 @@ import (
 	"github.com/go-openapi/strfmt"
 )
 
-func (j *Janusgraph) fillThingResponseFromVertex(vertex *gremlin.Vertex, thingResponse *models.ThingGetResponse) error {
+func (j *Janusgraph) fillThingResponseFromVertexAndEdges(vertex *gremlin.Vertex, edges []*gremlin.Edge, thingResponse *models.ThingGetResponse) error {
 	thingResponse.ThingID = strfmt.UUID(vertex.AssertProperty("uuid").AssertString())
 	thingResponse.AtClass = vertex.AssertProperty("atClass").AssertString()
 	thingResponse.AtContext = vertex.AssertProperty("context").AssertString()

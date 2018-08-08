@@ -22,3 +22,7 @@ func fillKeyResponseFromVertex(vertex *gremlin.Vertex, keyResponse *models.KeyGe
 	isRoot := vertex.AssertProperty("isRoot").AssertBool()
 	keyResponse.IsRoot = &isRoot
 }
+
+func fillKeySingleRefFromVertex(vertex *gremlin.Vertex, keyRef *models.SingleRef) {
+	// TODO
+}

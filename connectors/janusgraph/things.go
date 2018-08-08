@@ -15,10 +15,9 @@ package janusgraph
 
 import (
 	"context"
+	"errors"
 	"reflect"
 	"time"
-
-	"fmt"
 
 	"github.com/go-openapi/strfmt"
 
@@ -108,13 +107,17 @@ func (f *Janusgraph) AddThing(ctx context.Context, thing *models.Thing, UUID str
 }
 
 func (f *Janusgraph) GetThing(ctx context.Context, UUID strfmt.UUID, thingResponse *models.ThingGetResponse) error {
-	/// g.V().hasLabel("thing").has("uuid", "e0228ab2-4ca1-41f6-a31f-55af8c66026d").as("t").outE("_key").as("key").outV().outE("thingEdge").as("outrefs").select("t", "key", "outrefs")
-
-	// Fetch the thing, and it's relations.
+	// Fetch the thing, it's key, and it's relations.
 	q := gremlin.G.V().
 		HasLabel(THING_LABEL).
-		HasString("uuid", string(UUID))
-		//OutEWithLabel(PROPERTY_EDGE_LABEL)
+		HasString("uuid", string(UUID)).
+		As("thing").
+		OutWithLabel(KEY_LABEL).As("key").
+		V().
+		HasLabel(THING_LABEL).
+		HasString("uuid", string(UUID)).
+		OutEWithLabel("thingEdge").As("ref").
+		Select([]string{"thing", "key", "ref"})
 
 	result, err := f.client.Execute(q)
 
@@ -122,26 +125,29 @@ func (f *Janusgraph) GetThing(ctx context.Context, UUID strfmt.UUID, thingRespon
 		return err
 	}
 
-	vertices, err := result.Vertices()
-
-	if err != nil {
-		return err
+	if len(result.Data) == 0 {
+		return errors.New("No thing found")
 	}
 
-	if len(vertices) == 0 {
-		fmt.Printf("NO THINGS FOUND")
-		return fmt.Errorf("No key found")
+	// We should have at least two pieces of data;
+	// 1)   The Thing
+	// 2)   The Key
+	// 3-N) Outgoing edges
+	if len(result.Data) < 2 {
+		return errors.New("No thing (or it's linked key) found!")
 	}
 
-	if len(vertices) != 1 {
-		return fmt.Errorf("More than one key with UUID '%v' found!", UUID)
+	thing_vertex := result.Data[0].AssertVertex()
+	key_vertex := result.Data[1].AssertVertex()
+
+	var edges []*gremlin.Edge
+
+	if len(result.Data) > 2 {
+		edges = result.AssertEdgeSlice(2, len(result.Data))
 	}
 
-	vertex := vertices[0]
-
-	fmt.Printf("FOUND VERTEX: %#v\n", vertex)
-
-	return f.fillThingResponseFromVertex(&vertex, thingResponse)
+	fillKeySingleRefFromVertex(key_vertex, thingResponse.Key)
+	return f.fillThingResponseFromVertexAndEdges(thing_vertex, edges, thingResponse)
 }
 
 func (f *Janusgraph) GetThings(ctx context.Context, UUIDs []strfmt.UUID, thingResponse *models.ThingsListResponse) error {
