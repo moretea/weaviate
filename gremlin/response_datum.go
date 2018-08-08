@@ -11,6 +11,66 @@ type Datum struct {
 	Datum interface{}
 }
 
+// If the Datum is a map, look up the key and return a datum for that key.
+func (d *Datum) Key(key string) (*Datum, error) {
+	x, ok := d.Datum.(map[string]interface{})
+	if !ok {
+		return nil, fmt.Errorf("Expected a map, but got something else as the result")
+	}
+
+	element, ok := x[key]
+
+	if !ok {
+		return nil, fmt.Errorf("No such key '%v'", key)
+	}
+
+	return &Datum{Datum: element}, nil
+}
+
+func (d *Datum) AssertKey(key string) *Datum {
+	datum, err := d.Key(key)
+	if err != nil {
+		panic(err)
+	}
+	return datum
+}
+
+func (d *Datum) Path() (*Path, error) {
+	m, ok := d.Datum.(map[string]interface{})
+	if !ok {
+		return nil, fmt.Errorf("Expected a Path, but got something else as the result")
+	}
+
+	// Paths have a a 'labels' and 'objects' key.
+	_, label_ok := m["labels"]
+	objects_interface, object_ok := m["objects"]
+
+	if !label_ok || !object_ok {
+		return nil, fmt.Errorf("Expected a Path, but got something else as the result")
+	}
+
+	objects_list, ok := objects_interface.([]interface{})
+	if !ok {
+		return nil, fmt.Errorf("Expected a Path, but got something else as the result")
+	}
+
+	segments := make([]Datum, 0)
+	for _, datum := range objects_list {
+		segment := Datum{Datum: datum}
+		segments = append(segments, segment)
+	}
+
+	return &Path{Segments: segments}, nil
+}
+
+func (d *Datum) AssertPath() *Path {
+	path, err := d.Path()
+	if err != nil {
+		panic(err)
+	}
+	return path
+}
+
 // Extract the type of a datum. This method is intended to be a debugging tool,
 // don't use it in a critical path.
 func (d *Datum) Type() string {
@@ -18,7 +78,7 @@ func (d *Datum) Type() string {
 	case int:
 		return "int"
 	default:
-		return fmt.Sprintf("Unknown type for '%#v'", reflect.TypeOf(d.Datum).Name())
+		return fmt.Sprintf("Unknown type for '%s'", reflect.TypeOf(d.Datum).Name())
 	}
 }
 
@@ -62,7 +122,7 @@ func (d *Datum) Vertex() (*Vertex, error) {
 		return nil, errors.New("Vertex element does not have an object for properties ")
 	}
 
-	properties, err := extractProperties(properties_map)
+	properties, err := extractVertexProperties(properties_map)
 	if err != nil {
 		return nil, err
 	}
@@ -81,6 +141,71 @@ func (d *Datum) AssertVertex() *Vertex {
 
 	if err != nil {
 		panic(fmt.Sprintf("Expected datum to be an Vertex, but it was '%s'", d.Type()))
+	}
+
+	return v
+}
+
+// Attempt to extract a edge from this datum.
+func (d *Datum) Edge() (*Edge, error) {
+	v, ok := d.Datum.(map[string]interface{})
+	if !ok {
+		return nil, fmt.Errorf("Expected a edge, but got something else as the result")
+	}
+
+	type_, ok := v["type"]
+	if !ok || type_ != "edge" {
+		return nil, errors.New("edge element in result does not have type 'edge'")
+	}
+
+	label_interface, ok := v["label"]
+	if !ok {
+		return nil, errors.New("edge element does not have a label")
+	}
+	label, ok := label_interface.(string)
+	if !ok {
+		return nil, errors.New("edge element does not have a string as a label")
+	}
+
+	id_interface, ok := v["id"]
+	if !ok {
+		return nil, errors.New("edge element does not have a id")
+	}
+	id, ok := id_interface.(string)
+	if !ok {
+		return nil, errors.New("edge element does not have a string as a id")
+	}
+
+	var properties map[string]PropertyValue
+
+	properties_interface, ok := v["properties"]
+	if ok {
+		properties_map, ok := properties_interface.(map[string]interface{})
+		if !ok {
+			return nil, errors.New("edge element does not have an object for properties ")
+		}
+
+		var err error
+		properties, err = extractEdgeProperties(properties_map)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	edge := Edge{
+		Id:         id,
+		Label:      label,
+		Properties: properties,
+	}
+
+	return &edge, nil
+}
+
+func (d *Datum) AssertEdge() *Edge {
+	v, err := d.Edge()
+
+	if err != nil {
+		panic(fmt.Sprintf("Expected datum to be an Edge, but %s", err))
 	}
 
 	return v

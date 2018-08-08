@@ -5,13 +5,13 @@ import (
 )
 
 type Edge struct {
-	Id         int
+	Id         string
 	Label      string
-	Properties map[string]Property
+	Properties map[string]PropertyValue
 }
 
-func (e *Edge) AssertProperty(name string) *Property {
-	prop := e.Property(name)
+func (e *Edge) AssertPropertyValue(name string) *PropertyValue {
+	prop := e.PropertyValue(name)
 
 	if prop == nil {
 		panic(fmt.Sprintf("Expected to find a property '%v' on edge '%v', but no such property exists!", name, e.Id))
@@ -20,7 +20,7 @@ func (e *Edge) AssertProperty(name string) *Property {
 	return prop
 }
 
-func (e *Edge) Property(name string) *Property {
+func (e *Edge) PropertyValue(name string) *PropertyValue {
 	val, ok := e.Properties[name]
 	if !ok {
 		return nil

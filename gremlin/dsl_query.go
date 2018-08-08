@@ -20,6 +20,10 @@ func RawQuery(query string) *Query {
 	return &Query{query: query}
 }
 
+func (q *Query) Raw(query string) *Query {
+	return extend_query(q, query)
+}
+
 func (q *Query) V() *Query {
 	return extend_query(q, ".V()")
 }
@@ -112,8 +116,17 @@ func (q *Query) OutEWithLabel(label string) *Query {
 	return extend_query(q, `.outE("%s")`, escapeString(label))
 }
 
+func (q *Query) InV() *Query {
+	return extend_query(q, ".inV()")
+}
+
 func (q *Query) OutV() *Query {
 	return extend_query(q, ".outV()")
+}
+
+// Return the travelled path
+func (q *Query) Path() *Query {
+	return extend_query(q, ".path()")
 }
 
 // Create a reference

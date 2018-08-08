@@ -5,81 +5,85 @@ import (
 )
 
 type Property struct {
-	Id   string
-	Data interface{}
+	Id    string
+	Value PropertyValue
 }
 
-func (p *Property) String() (string, bool) {
-	val, ok := p.Data.(string)
+type PropertyValue struct {
+	Value interface{}
+}
+
+func (p *PropertyValue) String() (string, bool) {
+	val, ok := p.Value.(string)
 	return val, ok
 }
 
-func (p *Property) AssertString() string {
+func (p *PropertyValue) AssertString() string {
 	val, ok := p.String()
 	if ok {
 		return val
 	} else {
-		panic(fmt.Sprintf("Expected a string, but got %#v", p.Data))
+		panic(fmt.Sprintf("Expected a string, but got %#v", p.Value))
 	}
 }
 
-func (p *Property) Float() (float64, bool) {
-	val, ok := p.Data.(float64)
+func (p *PropertyValue) Float() (float64, bool) {
+	val, ok := p.Value.(float64)
 	return val, ok
 }
 
-func (p *Property) AssertFloat() float64 {
+func (p *PropertyValue) AssertFloat() float64 {
 	val, ok := p.Float()
 	if ok {
 		return val
 	} else {
-		panic(fmt.Sprintf("Expected a float, but got %#v", p.Data))
+		panic(fmt.Sprintf("Expected a float, but got %#v", p.Value))
 	}
 }
 
-func (p *Property) Int() (int, bool) {
-	val, ok := p.Data.(float64)
+func (p *PropertyValue) Int() (int, bool) {
+	val, ok := p.Value.(float64)
 	return int(val), ok
 }
 
-func (p *Property) AssertInt() int {
+func (p *PropertyValue) AssertInt() int {
 	val, ok := p.Int()
 	if ok {
 		return val
 	} else {
-		panic(fmt.Sprintf("Expected a int, but got %#v", p.Data))
+		panic(fmt.Sprintf("Expected a int, but got %#v", p.Value))
 	}
 }
 
-func (p *Property) Int64() (int64, bool) {
-	val, ok := p.Data.(float64)
+func (p *PropertyValue) Int64() (int64, bool) {
+	val, ok := p.Value.(float64)
 	return int64(val), ok
 }
 
-func (p *Property) AssertInt64() int64 {
+func (p *PropertyValue) AssertInt64() int64 {
 	val, ok := p.Int64()
 	if ok {
 		return val
 	} else {
-		panic(fmt.Sprintf("Expected a int, but got %#v", p.Data))
+		panic(fmt.Sprintf("Expected a int, but got %#v", p.Value))
 	}
 }
 
-func (p *Property) Bool() (bool, bool) {
-	val, ok := p.Data.(bool)
+func (p *PropertyValue) Bool() (bool, bool) {
+	val, ok := p.Value.(bool)
 	return val, ok
 }
 
-func (p *Property) AssertBool() bool {
+func (p *PropertyValue) AssertBool() bool {
 	val, ok := p.Bool()
 	if ok {
 		return val
 	} else {
-		panic(fmt.Sprintf("Expected a bool, but got %#v", p.Data))
+		panic(fmt.Sprintf("Expected a bool, but got %#v", p.Value))
 	}
 }
 
-func extractProperties(props map[string]interface{}) (map[string]Property, error) {
+func extractVertexProperties(props map[string]interface{}) (map[string]Property, error) {
 	properties := make(map[string]Property)
 	for key, prop_val := range props {
 		prop_val_maps, ok := prop_val.([]interface{})
@@ -114,8 +118,21 @@ func extractProperties(props map[string]interface{}) (map[string]Property, error
 		}
 
 		property := Property{
-			Id:   prop_id,
-			Data: prop_val,
+			Id:    prop_id,
+			Value: PropertyValue{Value: prop_val},
+		}
+
+		properties[key] = property
+	}
+
+	return properties, nil
+}
+
+func extractEdgeProperties(props map[string]interface{}) (map[string]PropertyValue, error) {
+	properties := make(map[string]PropertyValue)
+	for key, prop_val := range props {
+		property := PropertyValue{
+			Value: prop_val,
 		}
 
 		properties[key] = property

@@ -42,7 +42,7 @@ func (f *Janusgraph) ValidateToken(ctx context.Context, UUID strfmt.UUID, keyRes
 
 	vertex := vertices[0]
 	fillKeyResponseFromVertex(&vertex, keyResponse)
-	tokenToReturn, err := base64.StdEncoding.DecodeString(vertex.AssertProperty("__token").AssertString())
+	tokenToReturn, err := base64.StdEncoding.DecodeString(vertex.AssertPropertyValue("__token").AssertString())
 
 	if err != nil {
 		return "", err

@@ -913,12 +913,17 @@ func configureAPI(api *operations.WeaviateAPI) http.Handler {
 
 		// Object is not found
 		if err != nil || responseObject.Key == nil {
-			messaging.ErrorMessage(err)
+			if responseObject.Key == nil {
+				messaging.ErrorMessage("The found thing does not have a key!")
+			} else {
+				messaging.ErrorMessage(err)
+			}
 			return things.NewWeaviateThingsGetNotFound()
 		}
 
 		// This is a read function, validate if allowed to read?
 		if allowed, _ := auth.ActionsAllowed(ctx, []string{"read"}, principal, dbConnector, responseObject.Key.NrDollarCref); !allowed {
+			// TODO extend response with error message.
 			return things.NewWeaviateThingsGetForbidden()
 		}
 

@@ -1,7 +1,7 @@
 package janusgraph
 
 import (
-	//	"strings"
+	"strings"
 
 	"github.com/creativesoftwarefdn/weaviate/gremlin"
 	"github.com/creativesoftwarefdn/weaviate/models"
@@ -9,30 +9,46 @@ import (
 	"github.com/go-openapi/strfmt"
 )
 
-func (j *Janusgraph) fillThingResponseFromVertexAndEdges(vertex *gremlin.Vertex, edges []*gremlin.Edge, thingResponse *models.ThingGetResponse) error {
-	thingResponse.ThingID = strfmt.UUID(vertex.AssertProperty("uuid").AssertString())
-	thingResponse.AtClass = vertex.AssertProperty("atClass").AssertString()
-	thingResponse.AtContext = vertex.AssertProperty("context").AssertString()
+func fillThingResponseFromVertexAndEdges(vertex *gremlin.Vertex, refEdges []*gremlin.Edge, thingResponse *models.ThingGetResponse) error {
+	// TODO: We should actually read stuff from the database schema, then get only that stuff from JanusGraph.
+	// At this moment, we're just parsing whetever there is in JanusGraph, which might not agree with the database schema
+	// that is defined in Weaviate.
 
-	thingResponse.CreationTimeUnix = vertex.AssertProperty("creationTimeUnix").AssertInt64()
-	thingResponse.LastUpdateTimeUnix = vertex.AssertProperty("lastUpdateTimeUnix").AssertInt64()
+	thingResponse.ThingID = strfmt.UUID(vertex.AssertPropertyValue("uuid").AssertString())
+	thingResponse.AtClass = vertex.AssertPropertyValue("atClass").AssertString()
+	thingResponse.AtContext = vertex.AssertPropertyValue("context").AssertString()
 
-	thingResponse.Schema = make(map[string]interface{})
-	//thingResponse.Key = models.SingleRef {
-	//  NrDollarCref: key
-	//}
-	//  j.createCrefObject(keyUUID, j.serverAddress, connutils.RefTypeKey)
+	thingResponse.CreationTimeUnix = vertex.AssertPropertyValue("creationTimeUnix").AssertInt64()
+	thingResponse.LastUpdateTimeUnix = vertex.AssertPropertyValue("lastUpdateTimeUnix").AssertInt64()
 
-	//keyResponse.KeyExpiresUnix = vertex.AssertProperty("keyExpiresUnix").AssertInt64()
-	//keyResponse.Write = vertex.AssertProperty("write").AssertBool()
-	//keyResponse.Email = vertex.AssertProperty("email").AssertString()
-	//keyResponse.Read = vertex.AssertProperty("read").AssertBool()
-	//keyResponse.Delete = vertex.AssertProperty("delete").AssertBool()
-	//keyResponse.Execute = vertex.AssertProperty("execute").AssertBool()
-	//keyResponse.IPOrigin = strings.Split(vertex.AssertProperty("IPOrigin").AssertString(), ";")
+	schema := make(map[string]interface{})
 
-	//isRoot := vertex.AssertProperty("isRoot").AssertBool()
-	//keyResponse.IsRoot = &isRoot
+	// Walk through all properties, check if they start with 'schema__', and then consider them to be 'schema' properties.
+	// Just copy in the value directly. We're not doing any sanity check/casting to proper types for now.
+	for key, val := range vertex.Properties {
+		if strings.HasPrefix(key, "schema__") {
+			key = key[8:len(key)]
+			schema[key] = val.Value.Value
+		}
+	}
+
+	// For each of the connected edges, get the property values,
+	// and store the reference.
+	for _, edge := range refEdges {
+		locationUrl := edge.AssertPropertyValue("locationUrl").AssertString()
+		type_ := edge.AssertPropertyValue("type").AssertString()
+		edgeName := edge.AssertPropertyValue("propertyEdge").AssertString()
+		uuid := edge.AssertPropertyValue("$cref").AssertString()
+
+		key := edgeName[8:len(edgeName)]
+		ref := make(map[string]interface{})
+		ref["$cref"] = uuid
+		ref["locationUrl"] = locationUrl
+		ref["type"] = type_
+		schema[key] = ref
+	}
+
+	thingResponse.Schema = schema
 
 	return nil
 }

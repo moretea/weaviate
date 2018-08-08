@@ -98,6 +98,7 @@ func (f *Janusgraph) AddThing(ctx context.Context, thing *models.Thing, UUID str
 
 	// Link to key
 	q = q.AddE(KEY_LABEL).
+		StringProperty("locationUrl", *thing.Key.LocationURL).
 		FromRef("newThing").
 		ToQuery(gremlin.G.V().HasLabel(KEY_LABEL).HasString("uuid", thing.Key.NrDollarCref.String()))
 
@@ -112,11 +113,12 @@ func (f *Janusgraph) GetThing(ctx context.Context, UUID strfmt.UUID, thingRespon
 		HasLabel(THING_LABEL).
 		HasString("uuid", string(UUID)).
 		As("thing").
-		OutWithLabel(KEY_LABEL).As("key").
+		OutEWithLabel(KEY_LABEL).As("keyEdge").
+		InV().Path().FromRef("keyEdge").As("key"). // also get the path, so that we can learn about the location of the key.
 		V().
 		HasLabel(THING_LABEL).
 		HasString("uuid", string(UUID)).
-		OutEWithLabel("thingEdge").As("ref").
+		Raw(`.optional(outE("thingEdge").as("thingEdge")).as("ref")`).
 		Select([]string{"thing", "key", "ref"})
 
 	result, err := f.client.Execute(q)
@@ -129,25 +131,23 @@ func (f *Janusgraph) GetThing(ctx context.Context, UUID strfmt.UUID, thingRespon
 		return errors.New("No thing found")
 	}
 
-	// We should have at least two pieces of data;
-	// 1)   The Thing
-	// 2)   The Key
-	// 3-N) Outgoing edges
-	if len(result.Data) < 2 {
-		return errors.New("No thing (or it's linked key) found!")
+	// The outputs 'thing' and 'key' will be repeated over all results. Just get them for one for now.
+	thingVertex := result.Data[0].AssertKey("thing").AssertVertex()
+	keyPath := result.Data[0].AssertKey("key").AssertPath()
+
+	// However, we can get multiple refs. In that case, we'll have multiple datums,
+	// each with the same thing & key, but a different ref.
+	// Let's extract those refs.
+	var refEdges []*gremlin.Edge
+	for _, datum := range result.Data {
+		ref, err := datum.Key("ref")
+		if err == nil {
+			refEdges = append(refEdges, ref.AssertEdge())
+		}
 	}
 
-	thing_vertex := result.Data[0].AssertVertex()
-	key_vertex := result.Data[1].AssertVertex()
-
-	var edges []*gremlin.Edge
-
-	if len(result.Data) > 2 {
-		edges = result.AssertEdgeSlice(2, len(result.Data))
-	}
-
-	fillKeySingleRefFromVertex(key_vertex, thingResponse.Key)
-	return f.fillThingResponseFromVertexAndEdges(thing_vertex, edges, thingResponse)
+	thingResponse.Key = newKeySingleRefFromKeyPath(keyPath)
+	return fillThingResponseFromVertexAndEdges(thingVertex, refEdges, thingResponse)
 }
 
 func (f *Janusgraph) GetThings(ctx context.Context, UUIDs []strfmt.UUID, thingResponse *models.ThingsListResponse) error {

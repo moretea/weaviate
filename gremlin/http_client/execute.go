@@ -20,8 +20,8 @@ type gremlinResponseStatus struct {
 }
 
 type gremlinResponseResult struct {
-	Data []gremlin.Datum `json:"data"`
-	Meta interface{}     `json:"meta"`
+	Data []interface{} `json:"data"`
+	Meta interface{}   `json:"meta"`
 }
 
 type gremlinResponse struct {
@@ -61,17 +61,25 @@ func (c *Client) Execute(query *gremlin.Query) (*gremlin.Response, error) {
 	var response_data gremlinResponse
 	json.Unmarshal(buf, &response_data)
 
-	log.WithField("status_code", http_response.StatusCode).WithField("response", string(buf)).Debugf("Received reply")
+	log.WithField("status_code", http_response.StatusCode).Debugf("Received reply: %s", string(buf))
 	switch http_response.StatusCode {
 	case 200:
-		client_response := gremlin.Response{Data: response_data.Result.Data}
+		data := make([]gremlin.Datum, 0)
+
+		for _, d := range response_data.Result.Data {
+			data = append(data, gremlin.Datum{Datum: d})
+		}
+
+		client_response := gremlin.Response{Data: data}
 		return &client_response, nil
 	case 500:
+		// TODO return status message
 		return nil, fmt.Errorf("Server error: %s", string(buf))
 	default:
 		return nil, fmt.Errorf("Unexpected status code %v", http_response.StatusCode)
 	}
 
 	// should not reach this; default case in switch should handle everything.
+	panic("unreachable")
 	return nil, nil
 }

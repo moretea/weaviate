@@ -10,8 +10,8 @@ type Vertex struct {
 	Properties map[string]Property
 }
 
-func (v *Vertex) AssertProperty(name string) *Property {
-	prop := v.Property(name)
+func (v *Vertex) AssertPropertyValue(name string) *PropertyValue {
+	prop := v.PropertyValue(name)
 
 	if prop == nil {
 		panic(fmt.Sprintf("Expected to find a property '%v' on vertex '%v', but no such property exists!", name, v.Id))
@@ -20,11 +20,11 @@ func (v *Vertex) AssertProperty(name string) *Property {
 	return prop
 }
 
-func (v *Vertex) Property(name string) *Property {
+func (v *Vertex) PropertyValue(name string) *PropertyValue {
 	val, ok := v.Properties[name]
 	if !ok {
 		return nil
 	} else {
-		return &val
+		return &val.Value
 	}
 }
