@@ -20,7 +20,7 @@ var RootApiToken string
 var ServerPort string
 var ServerHost string
 var ServerScheme string
-var DebugClient bool
+var DebugHTTP bool
 
 // Credentials for the root key
 var RootAuth runtime.ClientAuthInfoWriterFunc
@@ -32,6 +32,7 @@ func init() {
 	flag.StringVar(&ServerPort, "server-port", "8080", "Port number on which the server is running.")
 	flag.StringVar(&ServerHost, "server-host", "127.0.0.1", "Host-name on which the server is running.")
 	flag.StringVar(&ServerScheme, "server-scheme", "http", "Scheme on which the server is running.")
+	flag.BoolVar(&DebugHTTP, "debug-http", false, "Whether or not to print HTTP traffic")
 	flag.Parse()
 
 	RootApiKey = strfmt.UUID(rootApiKey)
