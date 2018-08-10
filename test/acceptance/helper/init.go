@@ -27,11 +27,11 @@ var RootAuth runtime.ClientAuthInfoWriterFunc
 
 func init() {
 	var rootApiKey string
-	flag.StringVar(&rootApiKey, "api-key", "", "API-KEY as used as haeder in the tests.")
-	flag.StringVar(&RootApiToken, "api-token", "", "API-KEY as used as haeder in the tests.")
-	flag.StringVar(&ServerPort, "server-port", "", "Port number on which the server is running.")
-	flag.StringVar(&ServerHost, "server-host", "", "Host-name on which the server is running.")
-	flag.StringVar(&ServerScheme, "server-scheme", "", "Scheme on which the server is running.")
+	flag.StringVar(&rootApiKey, "api-key", "657a48b9-e000-4d9a-b51d-69a0b621c1b9", "API-KEY as used as haeder in the tests.")
+	flag.StringVar(&RootApiToken, "api-token", "57ac8392-1ecc-4e17-9350-c9c866ac832b", "API-KEY as used as haeder in the tests.")
+	flag.StringVar(&ServerPort, "server-port", "8080", "Port number on which the server is running.")
+	flag.StringVar(&ServerHost, "server-host", "127.0.0.1", "Host-name on which the server is running.")
+	flag.StringVar(&ServerScheme, "server-scheme", "http", "Scheme on which the server is running.")
 	flag.Parse()
 
 	RootApiKey = strfmt.UUID(rootApiKey)
