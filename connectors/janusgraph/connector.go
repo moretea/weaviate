@@ -6,6 +6,8 @@ import (
 
 	"fmt"
 
+	"github.com/go-openapi/strfmt"
+
 	"github.com/mitchellh/mapstructure"
 
 	"github.com/creativesoftwarefdn/weaviate/config"
@@ -38,7 +40,9 @@ type Janusgraph struct {
 // }
 // Notice that the port is the GRPC-port.
 type Config struct {
-	Url string
+	Url          string
+	InitialKey   *string
+	InitialToken *string
 }
 
 // GetName returns a unique connector name, this name is used to define the connector in the weaviate config
@@ -131,11 +135,21 @@ func (j *Janusgraph) ensureRootKeyExists() error {
 
 		// Create new object and fill it
 		keyObject := models.Key{}
-		token, UUID := connutils.CreateRootKeyObject(&keyObject)
+
+		var hashedToken string
+		var UUID strfmt.UUID
+
+		if j.config.InitialKey != nil && j.config.InitialToken != nil {
+			j.messaging.InfoMessage("Using the initial root key & token as specfied in the configuration")
+			UUID = strfmt.UUID(*j.config.InitialKey)
+			hashedToken = connutils.CreateRootKeyObjectFromTokenAndUUID(&keyObject, UUID, strfmt.UUID(*j.config.InitialToken))
+		} else {
+			hashedToken, UUID = connutils.CreateRootKeyObject(&keyObject)
+		}
 
 		// Add the root-key to the database
 		ctx := context.Background()
-		err = j.AddKey(ctx, &keyObject, UUID, token)
+		err = j.AddKey(ctx, &keyObject, UUID, hashedToken)
 
 		if err != nil {
 			return err
