@@ -9,6 +9,7 @@ package helper
 
 import (
 	"flag"
+	"fmt"
 
 	"github.com/go-openapi/runtime"
 	"github.com/go-openapi/strfmt"
@@ -46,4 +47,8 @@ func init() {
 	}
 
 	RootAuth = CreateAuth(RootApiKey, RootApiToken)
+}
+
+func GetWeaviateURL() string {
+	return fmt.Sprintf("%s://%s:%s", ServerScheme, ServerHost, ServerPort)
 }
