@@ -16,6 +16,7 @@ package janusgraph
 import (
 	"context"
 	"errors"
+	"fmt"
 	"reflect"
 	"time"
 
@@ -118,8 +119,7 @@ func (f *Janusgraph) GetThing(ctx context.Context, UUID strfmt.UUID, thingRespon
 		V().
 		HasLabel(THING_LABEL).
 		HasString("uuid", string(UUID)).
-		Raw(`.optional(outE("thingEdge").as("thingEdge")).as("ref")`).
-		Select([]string{"thing", "key", "ref"})
+		Raw(`.optional(outE("thingEdge").as("thingEdge").as("ref")).choose(select("ref"), select("thing", "key", "ref"), select("thing", "key"))`)
 
 	result, err := f.client.Execute(q)
 
@@ -128,7 +128,7 @@ func (f *Janusgraph) GetThing(ctx context.Context, UUID strfmt.UUID, thingRespon
 	}
 
 	if len(result.Data) == 0 {
-		return errors.New("No thing found")
+		return errors.New(connutils.StaticThingNotFound)
 	}
 
 	// The outputs 'thing' and 'key' will be repeated over all results. Just get them for one for now.
@@ -150,7 +150,24 @@ func (f *Janusgraph) GetThing(ctx context.Context, UUID strfmt.UUID, thingRespon
 	return fillThingResponseFromVertexAndEdges(thingVertex, refEdges, thingResponse)
 }
 
-func (f *Janusgraph) GetThings(ctx context.Context, UUIDs []strfmt.UUID, thingResponse *models.ThingsListResponse) error {
+func (f *Janusgraph) GetThings(ctx context.Context, UUIDs []strfmt.UUID, response *models.ThingsListResponse) error {
+	// TODO: Optimize query to perform just _one_ JanusGraph lookup.
+
+	response.TotalResults = 0
+	response.Things = make([]*models.ThingGetResponse, 0)
+
+	for _, uuid := range UUIDs {
+		var thing_response models.ThingGetResponse
+		err := f.GetThing(ctx, uuid, &thing_response)
+
+		if err != nil {
+			response.TotalResults += 1
+			response.Things = append(response.Things, &thing_response)
+		} else {
+			return fmt.Errorf("%s: thing with UUID '%v' not found", connutils.StaticThingNotFound, uuid)
+		}
+	}
+
 	return nil
 }
 
