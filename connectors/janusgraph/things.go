@@ -176,7 +176,83 @@ func (f *Janusgraph) ListThings(ctx context.Context, first int, offset int, keyI
 }
 
 func (f *Janusgraph) UpdateThing(ctx context.Context, thing *models.Thing, UUID strfmt.UUID) error {
-	return nil
+	// Base settings
+	q := gremlin.G.V().HasLabel(THING_LABEL).
+		HasString("uuid", string(UUID)).
+		As("thing").
+		StringProperty("atClass", thing.AtClass).
+		StringProperty("context", thing.AtContext).
+		Int64Property("creationTimeUnix", thing.CreationTimeUnix).
+		Int64Property("lastUpdateTimeUnix", thing.LastUpdateTimeUnix)
+
+	type expectedEdge struct {
+		PropertyName string
+		Type         string
+		Reference    string
+		Location     string
+	}
+
+	var expectedEdges []expectedEdge
+
+	schema, schema_ok := thing.Schema.(map[string]interface{})
+	if schema_ok {
+		for key, value := range schema {
+			janusgraphPropertyName := "schema__" + key
+			switch t := value.(type) {
+			case string:
+				q = q.StringProperty(janusgraphPropertyName, t)
+			case int:
+				q = q.Int64Property(janusgraphPropertyName, int64(t))
+			case int8:
+				q = q.Int64Property(janusgraphPropertyName, int64(t))
+			case int16:
+				q = q.Int64Property(janusgraphPropertyName, int64(t))
+			case int32:
+				q = q.Int64Property(janusgraphPropertyName, int64(t))
+			case int64:
+				q = q.Int64Property(janusgraphPropertyName, t)
+			case bool:
+				q = q.BoolProperty(janusgraphPropertyName, t)
+			case float32:
+				q = q.Float64Property(janusgraphPropertyName, float64(t))
+			case float64:
+				q = q.Float64Property(janusgraphPropertyName, t)
+			case time.Time:
+				q = q.StringProperty(janusgraphPropertyName, time.Time.String(t))
+			case *models.SingleRef:
+				// Postpone creation of edges
+				expectedEdges = append(expectedEdges, expectedEdge{
+					PropertyName: janusgraphPropertyName,
+					Reference:    t.NrDollarCref.String(),
+					Type:         t.Type,
+					Location:     *t.LocationURL,
+				})
+			default:
+				f.messaging.ExitError(78, "The type "+reflect.TypeOf(value).String()+" is not supported for Thing properties.")
+			}
+		}
+	}
+
+	// Update all edges to all referened things.
+	// TODO: verify what to if we're not mentioning some reference? how should we remove such a reference?
+	for _, edge := range expectedEdges {
+		// First drop the edge
+		q = q.Optional(gremlin.Current().OutEWithLabel("thingEdge").HasString(PROPERTY_EDGE_LABEL, edge.PropertyName).Drop()).
+			AddE("thingEdge").
+			FromRef("thing").
+			ToQuery(gremlin.G.V().HasLabel(THING_LABEL).HasString("uuid", edge.Reference)).
+			StringProperty(PROPERTY_EDGE_LABEL, edge.PropertyName).
+			StringProperty("$cref", edge.Reference).
+			StringProperty("type", edge.Type).
+			StringProperty("locationUrl", edge.Location)
+	}
+
+	// Don't update the key.
+	// TODO verify that indeed this is the desired behaviour.
+
+	_, err := f.client.Execute(q)
+
+	return err
 }
 
 func (f *Janusgraph) DeleteThing(ctx context.Context, thing *models.Thing, UUID strfmt.UUID) error {
