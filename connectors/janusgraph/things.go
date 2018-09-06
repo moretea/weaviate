@@ -152,7 +152,6 @@ func (f *Janusgraph) GetThing(ctx context.Context, UUID strfmt.UUID, thingRespon
 	return fillThingResponseFromVertexAndEdges(thingVertex, refEdges, thingResponse)
 }
 
-// TODO check
 func (f *Janusgraph) GetThings(ctx context.Context, UUIDs []strfmt.UUID, response *models.ThingsListResponse) error {
 	// TODO: Optimize query to perform just _one_ JanusGraph lookup.
 
@@ -174,8 +173,8 @@ func (f *Janusgraph) GetThings(ctx context.Context, UUIDs []strfmt.UUID, respons
 	return nil
 }
 
-// TODO check
 func (f *Janusgraph) ListThings(ctx context.Context, first int, offset int, keyID strfmt.UUID, wheres []*connutils.WhereQuery, response *models.ThingsListResponse) error {
+	//TODO rewrite to one query.
 
 	if len(wheres) > 0 {
 		return errors.New("Wheres are not supported in LisThings")
