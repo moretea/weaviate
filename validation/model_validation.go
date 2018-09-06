@@ -31,14 +31,10 @@ const (
 	ErrorMissingActionThingsObject string = "no object-thing is added. Add the 'object' inside the 'things' part of the JSON"
 	// ErrorMissingActionThingsSubject message
 	ErrorMissingActionThingsSubject string = "no subject-thing is added. Add the 'subject' inside the 'things' part of the JSON"
-	// ErrorMissingActionThingsObjectLocation message
-	ErrorMissingActionThingsObjectLocation string = "no 'locationURL' is found in the object-thing. Add the 'locationURL' inside the 'object-thing' part of the JSON"
 	// ErrorMissingActionThingsObjectType message
 	ErrorMissingActionThingsObjectType string = "no 'type' is found in the object-thing. Add the 'type' inside the 'object-thing' part of the JSON"
 	// ErrorInvalidActionThingsObjectType message
 	ErrorInvalidActionThingsObjectType string = "object-thing requires one of the following values in 'type': '%s', '%s' or '%s'"
-	// ErrorMissingActionThingsSubjectLocation message
-	ErrorMissingActionThingsSubjectLocation string = "no 'locationURL' is found in the subject-thing. Add the 'locationURL' inside the 'subject-thing' part of the JSON"
 	// ErrorMissingActionThingsSubjectType message
 	ErrorMissingActionThingsSubjectType string = "no 'type' is found in the subject-thing. Add the 'type' inside the 'subject-thing' part of the JSON"
 	// ErrorInvalidActionThingsSubjectType message
@@ -98,11 +94,6 @@ func ValidateActionBody(ctx context.Context, action *models.ActionCreate, databa
 		return fmt.Errorf(ErrorMissingActionThingsSubject)
 	}
 
-	// Check whether the Object has a location
-	if action.Things.Object.LocationURL == nil {
-		return fmt.Errorf(ErrorMissingActionThingsObjectLocation)
-	}
-
 	// Check whether the Object has a type
 	if action.Things.Object.Type == "" {
 		return fmt.Errorf(ErrorMissingActionThingsObjectType)
@@ -116,11 +107,6 @@ func ValidateActionBody(ctx context.Context, action *models.ActionCreate, databa
 			connutils.RefTypeThing,
 			connutils.RefTypeKey,
 		)
-	}
-
-	// Check whether the Subject has a location
-	if action.Things.Subject.LocationURL == nil {
-		return fmt.Errorf(ErrorMissingActionThingsSubjectLocation)
 	}
 
 	// Check whether the Subject has a type
@@ -180,8 +166,15 @@ func ValidateSingleRef(ctx context.Context, serverConfig *config.WeaviateConfig,
 	// Init reftype
 	refType := connutils.RefType(cref.Type)
 
+	var isRemote bool
+	if cref.LocationURL == nil {
+		isRemote = false
+	} else if serverConfig.GetHostAddress() != *cref.LocationURL {
+		isRemote = true
+	}
+
 	// Check existence of Object, external or internal
-	if serverConfig.GetHostAddress() != *cref.LocationURL {
+	if isRemote {
 		// Search for key-information for resolving this part. Dont validate if not exists
 		instance, err := serverConfig.GetInstance(*cref.LocationURL, keyToken)
 		if err != nil {

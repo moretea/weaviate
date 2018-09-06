@@ -548,15 +548,16 @@
       "type": "object"
     },
     "SingleRef": {
+      "description": "A SingleRef is a reference to an object, which can either be a Thing, Action or Key. This reference can point to an object in this Weaviate instance, or to another reachable over the network.",
       "properties": {
         "$cref": {
-          "description": "Location of the cross reference.",
+          "description": "The identifier of the object to which this reference points",
           "format": "uuid",
           "type": "string"
         },
         "locationUrl": {
-          "default": "http://localhost/",
-          "description": "url of location. http://localhost means this database. This option can be used to refer to other databases.",
+          "default": null,
+          "description": "If null, this reference points to the local databse. In case of an reference to an external Weavate, it must contain a valid HTTP address",
           "format": "url",
           "type": "string"
         },
