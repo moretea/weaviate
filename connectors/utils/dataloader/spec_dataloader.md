@@ -28,7 +28,7 @@ Attach(ctx context.Context) (context.Context, error)
 
 ### GetLocalGraph()
 ```go
-GetGraph(request graphql.RequestParams) (interface{}, error)
+GetLocalGraph(request graphql.RequestParams) (interface{}, error)
 ```
 **Goal**: 
 * act as a central access point for all GraphQL endpoint resolvers
