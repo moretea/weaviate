@@ -42,31 +42,33 @@ GetGraph(request graphql.RequestParams) (interface{}, error)
 * `TODO`: to be determined
 
 ***
-### resolveLocalGetThing()
+### resolveLocalThing()
 ```go
-resolveLocalGetThing(request graphql.ResolveParams) (interface{}, error)
+resolveLocalThing(request graphql.ResolveParams) (interface{}, error)
 ```
 **Goal**: 
+* handle both LocalGetThing and LocalGetMetaThing requests
 * apply batching and caching
 * forward the Thing request to the database connector
 
 **Params**:
-* `request graphql.ResolveParams`: a struct storing all information relevant to the request
+* `request graphql.ResolveParams`: a struct storing all information relevant to the request. `request.Args['weaviate_request_type']` contains the request type (e.g. `'local_get_thing'` or `'local_get_meta_action'`)
 
 **Returns**:
 * `TODO`: to be determined
 
 ***
-### resolveLocalGetAction()
+### resolveLocalAction()
 ```go
-resolveLocalGetAction(request graphql.ResolveParams) (interface{}, error)
+resolveLocalAction(request graphql.ResolveParams) (interface{}, error)
 ```
 **Goal**: 
+* handle both LocalGetAction and LocalGetMetaAction requests
 * apply batching and caching
 * forward the Action request to the database connector
 
 **Params**:
-* `request graphql.ResolveParams`: a struct storing all information relevant to the request
+* `request graphql.ResolveParams`: a struct storing all information relevant to the request. `request.Args['weaviate_request_type']` contains the request type (e.g. `'local_get_thing'` or `'local_get_meta_action'`)
 
 **Returns**:
 * `TODO`: to be determined
