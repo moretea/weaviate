@@ -26,7 +26,7 @@ Attach(ctx context.Context) (context.Context, error)
 
 ## Function definitions: GraphQL
 
-### GetGraph()
+### GetLocalGraph()
 ```go
 GetGraph(request graphql.RequestParams) (interface{}, error)
 ```
