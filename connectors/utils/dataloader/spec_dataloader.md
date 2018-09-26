@@ -42,12 +42,12 @@ GetLocalGraph(request graphql.RequestParams) (interface{}, error)
 * `TODO`: to be determined
 
 ***
-### resolveLocalThing()
+### getLocalThings()
 ```go
-resolveLocalThing(request graphql.ResolveParams) (interface{}, error)
+getLocalThings(request graphql.ResolveParams) (interface{}, error)
 ```
 **Goal**: 
-* handle both LocalGetThing and LocalGetMetaThing requests
+* handle both Local Get Thing and Local GetMeta Thing requests
 * apply batching and caching
 * forward the Thing request to the database connector
 
@@ -58,12 +58,12 @@ resolveLocalThing(request graphql.ResolveParams) (interface{}, error)
 * `TODO`: to be determined
 
 ***
-### resolveLocalAction()
+### getLocalActions()
 ```go
-resolveLocalAction(request graphql.ResolveParams) (interface{}, error)
+getLocalActions(request graphql.ResolveParams) (interface{}, error)
 ```
 **Goal**: 
-* handle both LocalGetAction and LocalGetMetaAction requests
+* handle both Local Get Action and Local GetMeta Action requests
 * apply batching and caching
 * forward the Action request to the database connector
 
