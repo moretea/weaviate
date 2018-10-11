@@ -24,6 +24,7 @@ import (
 	"math"
 	"net/http"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/creativesoftwarefdn/weaviate/restapi/operations/graphql"
@@ -1221,14 +1222,7 @@ func configureAPI(api *operations.WeaviateAPI) http.Handler {
 		// Add security principal to context that we pass on to the GraphQL resolver.
 		graphql_context := context.WithValue(params.HTTPRequest.Context(), "principal", (principal.(*models.KeyTokenGetResponse)))
 
-		// Do the request
-		result := gographql.Do(gographql.Params{
-			Schema:         *graphQL.Schema(),
-			RequestString:  query,
-			OperationName:  operationName,
-			VariableValues: variables,
-			Context:        graphql_context,
-		})
+		result := handleSingleGraphQLRequest(*graphQL.Schema(), query, operationName, variables, graphql_context)
 
 		// Marshal the JSON
 		resultJSON, jsonErr := json.Marshal(result)
@@ -1251,9 +1245,76 @@ func configureAPI(api *operations.WeaviateAPI) http.Handler {
 		return graphql.NewWeaviateGraphqlPostOK().WithPayload(graphQLResponse)
 	})
 
+	api.GraphqlWeaviateGraphqlBatchPostHandler = graphql.WeaviateGraphqlBatchPostHandlerFunc(func(params graphql.WeaviateGraphqlBatchPostParams, principal interface{}) middleware.Responder {
+
+		//
+		// This code is just to make a point it is PSEUDO, don't use it, it won't work ;-)
+		//
+
+		// add promise handling
+		var wg sync.WaitGroup
+
+		// length of promise == length of batch request
+		wg.Add(len(params.Body))
+
+		// make a batch to return values
+		batchSlice := make([]models.graphQLBatchResponse, len(params.Body))
+
+		// loop over the single GQL requests
+		for _, element := range params.Body {
+
+			// kickof a go routine
+			go func() {
+				defer wg.Done()
+				result := handleSingleGraphQLRequest(*graphQL.Schema(), element.Query, element.OperationName, element.Variables, graphql_context)
+
+				// append to the batch
+				batchSlice = append(batchSlice, result)
+			}()
+		}
+
+		// wait for go routines to finish
+		wg.Wait()
+
+		// Marshal the JSON
+		resultJSON, jsonErr := json.Marshal(batchSlice)
+
+		// If json gave error, return nothing.
+		if jsonErr != nil {
+			return graphql.NewWeaviateGraphqlBatchPostUnprocessableEntity().WithPayload(errorResponse)
+		}
+
+		// Put the data in a response ready object
+		graphQLBatchResponse := &models.GraphQLBatchResponse{}
+		marshallErr := json.Unmarshal(resultJSON, graphQLBatchResponse)
+
+		// If json gave error, return nothing.
+		if marshallErr != nil {
+			return graphql.NewWeaviateGraphqlBatchPostUnprocessableEntity().WithPayload(errorResponse)
+		}
+
+		// Return the response
+		return graphql.NewWeaviateGraphqlBatchPostOK().WithPayload(graphQLBatchResponse)
+
+	})
+
 	api.ServerShutdown = func() {}
 
 	return setupGlobalMiddleware(api.Serve(setupMiddlewares))
+}
+
+// handle a single graphql request
+func handleSingleGraphQLRequest(schema gographql.Schema, query string, operationName string, variables map[string]interface{}, graphql_context context.Context) *gographql.Result {
+	// Do the request
+	result := gographql.Do(gographql.Params{
+		Schema:         *graphQL.Schema(),
+		RequestString:  query,
+		OperationName:  operationName,
+		VariableValues: variables,
+		Context:        graphql_context,
+	})
+	// return the result
+	return result
 }
 
 // The TLS configuration before HTTPS server starts.

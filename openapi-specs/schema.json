@@ -213,6 +213,13 @@
       },
       "type": "object"
     },
+    "GraphQLQueryBatch": {
+      "description": "GraphQL batch query",
+      "items": {
+        "$ref": "#/definitions/GraphQLQuery"
+      },
+      "type": "array"
+    },
     "GraphQLResponse": {
       "description": "GraphQL based repsonse: http://facebook.github.io/graphql/",
       "properties": {
@@ -353,7 +360,7 @@
         "$ref": "#/definitions/SingleRef"
       },
       "type": "array"
-      },
+    },
     "PatchDocument": {
       "description": "A JSONPatch document as defined by RFC 6902.",
       "properties": {
@@ -776,18 +783,17 @@
             "in": "body",
             "name": "body",
             "required": true,
-
             "schema": {
-               "type": "object",
-               "properties": {
-                 "action": {
-                   "$ref": "#/definitions/ActionCreate"
-                 },
-                 "async": {
-                   "type": "boolean",
-                   "description": "If `async` is true, return a 202 with the new ID of the Action. You will receive this response before the data is persisted. If `async` is false, you will receive confirmation after the value is persisted. The value of `async` defaults to false."
-                 }
-               }
+              "type": "object",
+              "properties": {
+                "action": {
+                  "$ref": "#/definitions/ActionCreate"
+                },
+                "async": {
+                  "type": "boolean",
+                  "description": "If `async` is true, return a 202 with the new ID of the Action. You will receive this response before the data is persisted. If `async` is false, you will receive confirmation after the value is persisted. The value of `async` defaults to false."
+                }
+              }
             }
           }
         ],
@@ -1131,6 +1137,49 @@
         "x-available-in-websocket": false
       }
     },
+    "/graphql/batch": {
+      "post": {
+        "description": "Get a response based on a batch array of GraphQL objects",
+        "operationId": "weaviate.graphql.batch.post",
+        "parameters": [
+          {
+            "description": "The GraphQL query request parameters as batch.",
+            "in": "body",
+            "name": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/GraphQLQueryBatch"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Succesful query (with select).",
+            "schema": {
+              "$ref": "#/definitions/GraphQLResponse"
+            }
+          },
+          "401": {
+            "description": "Unauthorized or invalid credentials."
+          },
+          "403": {
+            "description": "The used API-key has insufficient permissions."
+          },
+          "422": {
+            "description": "Request body contains well-formed (i.e., syntactically correct), but semantically erroneous. Are you sure the class is defined in the configuration file?",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          }
+        },
+        "summary": "Get a response based on a batch array of GraphQL objects",
+        "tags": [
+          "graphql"
+        ],
+        "x-available-in-mqtt": false,
+        "x-available-in-websocket": false
+      }
+    },
     "/keys": {
       "post": {
         "description": "Creates a new key. Input expiration date is validated on being in the future and not longer than parent expiration date.",
@@ -1417,8 +1466,7 @@
             "description": "Not healthy (yet)"
           }
         },
-        "security": [
-        ],
+        "security": [],
         "summary": "Check if a peer is alive.",
         "tags": [
           "P2P"
@@ -1452,8 +1500,7 @@
             "description": "Internal error"
           }
         },
-        "security": [
-        ],
+        "security": [],
         "tags": [
           "P2P"
         ],
@@ -1512,7 +1559,7 @@
                   "type": "boolean",
                   "description": "If `async` is true, return a 202 with the new ID of the Thing. You will receive this response before the data is persisted. If `async` is false, you will receive confirmation after the value is persisted. The value of `async` defaults to false."
                 },
-                "thing" : {
+                "thing": {
                   "$ref": "#/definitions/ThingCreate"
                 }
               }

@@ -415,6 +415,49 @@ func init() {
         "x-available-in-websocket": false
       }
     },
+    "/graphql/batch": {
+      "post": {
+        "description": "Get a response based on a batch array of GraphQL objects",
+        "tags": [
+          "graphql"
+        ],
+        "summary": "Get a response based on a batch array of GraphQL objects",
+        "operationId": "weaviate.graphql.batch.post",
+        "parameters": [
+          {
+            "description": "The GraphQL query request parameters as batch.",
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/GraphQLQueryBatch"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Succesful query (with select).",
+            "schema": {
+              "$ref": "#/definitions/GraphQLResponse"
+            }
+          },
+          "401": {
+            "description": "Unauthorized or invalid credentials."
+          },
+          "403": {
+            "description": "The used API-key has insufficient permissions."
+          },
+          "422": {
+            "description": "Request body contains well-formed (i.e., syntactically correct), but semantically erroneous. Are you sure the class is defined in the configuration file?",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          }
+        },
+        "x-available-in-mqtt": false,
+        "x-available-in-websocket": false
+      }
+    },
     "/keys": {
       "post": {
         "description": "Creates a new key. Input expiration date is validated on being in the future and not longer than parent expiration date.",
@@ -1352,6 +1395,13 @@ func init() {
           "description": "Additional variables for the query.",
           "type": "object"
         }
+      }
+    },
+    "GraphQLQueryBatch": {
+      "description": "GraphQL batch query",
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/GraphQLQuery"
       }
     },
     "GraphQLResponse": {
@@ -2293,6 +2343,49 @@ func init() {
             "required": true,
             "schema": {
               "$ref": "#/definitions/GraphQLQuery"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Succesful query (with select).",
+            "schema": {
+              "$ref": "#/definitions/GraphQLResponse"
+            }
+          },
+          "401": {
+            "description": "Unauthorized or invalid credentials."
+          },
+          "403": {
+            "description": "The used API-key has insufficient permissions."
+          },
+          "422": {
+            "description": "Request body contains well-formed (i.e., syntactically correct), but semantically erroneous. Are you sure the class is defined in the configuration file?",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          }
+        },
+        "x-available-in-mqtt": false,
+        "x-available-in-websocket": false
+      }
+    },
+    "/graphql/batch": {
+      "post": {
+        "description": "Get a response based on a batch array of GraphQL objects",
+        "tags": [
+          "graphql"
+        ],
+        "summary": "Get a response based on a batch array of GraphQL objects",
+        "operationId": "weaviate.graphql.batch.post",
+        "parameters": [
+          {
+            "description": "The GraphQL query request parameters as batch.",
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/GraphQLQueryBatch"
             }
           }
         ],
@@ -3273,6 +3366,13 @@ func init() {
           "description": "Additional variables for the query.",
           "type": "object"
         }
+      }
+    },
+    "GraphQLQueryBatch": {
+      "description": "GraphQL batch query",
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/GraphQLQuery"
       }
     },
     "GraphQLResponse": {
